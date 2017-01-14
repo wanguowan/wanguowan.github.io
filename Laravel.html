@@ -1,0 +1,563 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+    
+  Laravel - 
+  
+  </title>
+ <meta name="description" content="">
+ <link href="atom.xml" rel="alternate" title="" type="application/atom+xml">
+    <link rel="stylesheet" href="asset/css/foundation.min.css" />
+    <link rel="stylesheet" href="asset/css/docs.css" />
+
+    <script src="asset/js/vendor/modernizr.js"></script>
+    <script src="asset/js/vendor/jquery.js"></script>
+    <script src="asset/highlightjs/highlight.pack.js"></script>
+    <link href="asset/highlightjs/styles/github.css" media="screen, projection" rel="stylesheet" type="text/css">
+    <script>hljs.initHighlightingOnLoad();</script>
+    
+  </head>
+  <body class="antialiased hide-extras">
+    
+    <div class="marketing off-canvas-wrap" data-offcanvas>
+      <div class="inner-wrap">
+
+
+<nav class="top-bar docs-bar hide-for-small" data-topbar>
+
+<div id="header">
+    <h1><a href="index.html"></a></h1>
+</div>
+
+</nav>
+        <nav class="tab-bar show-for-small">
+  <a href="javascript:void(0)" class="left-off-canvas-toggle menu-icon">
+    <span> &nbsp; </span>
+  </a>
+</nav>
+
+<aside class="left-off-canvas-menu">
+      <ul class="off-canvas-list">
+      <li><a href="index.html">Home</a></li>
+      
+        <li class="divider"></li>
+        <li><label>PHP</label></li>
+
+          
+            <li><a title="PHP7安装" href="14843808098277.html">PHP7安装</a></li>
+          
+
+      
+        <li class="divider"></li>
+        <li><label>Laravel</label></li>
+
+          
+            <li><a title="Laravel Eloquent使用小记" href="14843810761202.html">Laravel Eloquent使用小记</a></li>
+          
+
+      
+        <li class="divider"></li>
+        <li><label>Linux</label></li>
+
+          
+            <li><a title="系统安装过程" href="14843811906479.html">系统安装过程</a></li>
+          
+
+      
+      </ul>
+    </aside>
+
+<a class="exit-off-canvas" href="#"></a>
+
+        <section id="main-content" role="main" class="scroll-container">
+
+          <div class="row">
+            <div class="large-3 medium-3 columns">
+              <div class="hide-for-small">
+                <div class="sidebar">
+                <nav>
+                  <ul id="side-nav" class="side-nav">
+
+                    
+                      <li class="side-title"><span>PHP</span></li>
+                        
+                          <li><a title="PHP7安装" href="14843808098277.html">PHP7安装</a></li>
+                        
+
+                    
+                      <li class="side-title"><span>Laravel</span></li>
+                        
+                          <li><a title="Laravel Eloquent使用小记" href="14843810761202.html">Laravel Eloquent使用小记</a></li>
+                        
+
+                    
+                      <li class="side-title"><span>Linux</span></li>
+                        
+                          <li><a title="系统安装过程" href="14843811906479.html">系统安装过程</a></li>
+                        
+
+                    
+                  </ul>
+                </nav>
+                </div>
+              </div>
+            </div>
+            <div class="large-9 medium-9 columns">
+
+ 
+
+
+	
+		<div class="markdown-body">
+		<h1>Laravel Eloquent使用小记</h1>
+
+		<p>今天因为开发数据库业务中间层需要，开始研究Laravel Eloquent，因为刚开始使用laravel框架的时候，都是使用query，查询构建器来写sql类似于</p>
+
+<pre><code>DB::connection(&#39;mydb&#39;)-&gt;table(&#39;mylove&#39;)
+                        -&gt;where( &#39;name&#39;, &#39;guowan&#39; )
+                        -&gt;get();
+</code></pre>
+
+<p>复杂一点的sql使用db::raw</p>
+
+<pre><code>DB::connection(&#39;mydb&#39;)-&gt;table(&#39;mylove&#39;)-&gt;select( DB::RAW( &#39;count(&quot;name&quot;) as mylovecount&#39; ) )
+                        -&gt;where( &#39;name&#39;, &#39;guowan&#39; )
+                        -&gt;get();
+</code></pre>
+
+<p>本着在工作中学习的态度开始研究Eloquent，对着laravel中文文档，开始设计Eloquent Model。这里给出表大概字段（因兼容老系统要求，表字段设计与当前业务不相符，这里不与讨论～）</p>
+
+<h3 id="toc_0">表结构</h3>
+
+<pre><code>CREATE TABLE `user_ext` (
+  `user_id`     int(10)             NOT NULL,
+  `realname`    varchar(255)        DEFAULT NULL,
+  `gender`      int(11)             NOT NULL DEFAULT &#39;0&#39;,
+  `birthday`    datetime            DEFAULT NULL,
+  `comefrom`    varchar(255)        DEFAULT NULL,
+  `qq`          varchar(255)        DEFAULT NULL,
+  `weibo`       varchar(255)        DEFAULT NULL,
+  `blog`        varchar(255)        DEFAULT NULL,
+  `mobile`      varchar(255)        DEFAULT NULL,
+  PRIMARY KEY (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+
+
+
+CREATE TABLE `user` (
+  `user_id`     int(10) NOT NULL AUTO_INCREMENT,
+  `username`    varchar(100)    DEFAULT NULL,
+  `email`       varchar(255)    DEFAULT NULL,
+  `user_img`    varchar(255)    DEFAULT NULL,
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+</code></pre>
+
+<h3 id="toc_1">创建Eloqueue Model</h3>
+
+<ul>
+<li>user</li>
+</ul>
+
+<pre><code>&lt;?php
+
+namespace App\Http\Models\Eloquent;
+
+use Illuminate\Database\Eloquent\Model;
+
+class CUser extends Model
+{
+    /**
+     * 与模型关联的数据表。
+     *
+     * @var string
+     */
+    protected $table = &#39;user&#39;;
+
+    /*
+     * 数据库表主键
+     *
+     * @var string
+     */
+    protected $primaryKey = &#39;user_id&#39;;
+
+    /*
+     * 取消自动维护create_at,update_at字段
+     *
+     * @var string
+     */
+    public $timestamps = false;
+
+
+    /*
+     * 获取与指定用户相关联的扩展信息记录
+     */
+    public function hasOneExt()
+    {
+        return $this-&gt;hasOne( &#39;App\Http\Models\Eloquent\CUserExt&#39;, &#39;user_id&#39;, &#39;user_id&#39; );
+    }
+}
+
+</code></pre>
+
+<ul>
+<li>user_ext</li>
+</ul>
+
+<pre><code>&lt;?php
+
+namespace App\Http\Models\Eloquent;
+
+use Illuminate\Database\Eloquent\Model;
+
+class CUserExt extends Model
+{
+
+    /**
+     * 与模型关联的数据表。
+     *
+     * @var string
+     */
+    protected $table = &#39;ac_user_ext&#39;;
+
+    /*
+     * 数据库表主键
+     *
+     * @var string
+     */
+    protected $primaryKey = &#39;user_id&#39;;
+
+    /*
+     * 取消自动维护create_at,update_at字段
+     *
+     * @var string
+     */
+    public $timestamps = false;
+
+
+    public function acUser()
+    {
+        return $this-&gt;belongsTo( &#39;App\Http\Models\Eloquent\CUser&#39; );
+    }
+}
+
+</code></pre>
+
+<p>user与user_ext表为1对1关系。</p>
+
+<h3 id="toc_2">注意</h3>
+
+<blockquote>
+<p>user model中的hasOneExt方法，之所以使用hasOneExt方法名，是通过方法命名，在调用方法的时候就可以知道和userExt表的关系。</p>
+
+<p>hasOne函数，第一个参数是类路径；第二个参数外键，也就是userExt表的主键；第三个参数才是user表主键。自己使用的时候，没有指定第二个和第三个参数，会出现错误</p>
+</blockquote>
+
+<h3 id="toc_3">问题</h3>
+
+<p>下面才是今天记录的主要内容，在使用过程中，出现一些问题，以及问题相应的解决方法，可能有些问题还没有解决或者解决的不好，这里记录一下，增加一下印象，也可以和其他同学一块讨论一下</p>
+
+<h4 id="toc_4">1. 依赖方法hasOneExt</h4>
+
+<p>调用下面方法</p>
+
+<pre><code>$oUser = CUser::find( $sUMId )-&gt;hasOneExt();
+</code></pre>
+
+<p>结果竟然返回UserExt表中数据。我的本意本来想做相应的关联查询，查出两个表的数据。然后在网上各种搜索Eloquent两表联查，返回两表字段。</p>
+
+<p>最终解决方案如下：</p>
+
+<pre><code>$oUser = CAcUser::with( &#39;hasOneExt&#39; )-&gt;find( $sUMId );
+</code></pre>
+
+<p>查询结果：</p>
+
+<pre><code>Array
+(
+    [user_id] =&gt; 1
+    [username] =&gt; admin
+    [email] =&gt; wanguowan521@163.com
+    [user_img] =&gt; 201303/26132122j2lg.jpg
+    [has_one_ext] =&gt; Array
+        (
+            [user_id] =&gt; 1
+            [realname] =&gt; 瞌睡
+            [gender] =&gt; 1
+            [birthday] =&gt;
+            [comefrom] =&gt; **,不限
+            [qq] =&gt;
+            [weibo] =&gt;
+            [blog] =&gt;
+            [mobile] =&gt;
+        )
+
+)
+</code></pre>
+
+<p>这里依赖表数据使用方法名作为key成为返回结果的一部分，这个对于业务接口，需要一维数组的时候还得需要翻译。幸好对于业务层来说，希望屏蔽底层数据层字段细节，本来就需要做一次翻译，所以这里也就不是什么大问题。</p>
+
+<p>这里with语法，是Eloquent中所谓的预加载语法，主要是为了解决ORM(Object Relation Mapping) n+1次查询问题--<a href="https://laravel-china.org/docs/5.1/eloquent-relationships#eager-loading">详细说明</a>。在网上查询过程中，这里虽然是1对1关系，但是如果这样解决，会将一次join查询，变成两次查询，对于将来高并发场景来说，有点不能接受。但是不这样解决又没有找到其他解决方法。</p>
+
+<p>无奈，尝试打印Eloquent执行的sql，查看具体的sql语句(打印laravel执行sql方法比较多，可以参考<a href="http://stackoverflow.com/questions/27753868/how-to-get-the-query-executed-in-laravel-5-dbgetquerylog-returning-empty-arr">资料</a>），代码如下：</p>
+
+<pre><code>DB::enableQueryLog();
+
+$oUser = CUser::with( &#39;hasOneExt&#39; )-&gt;find( $sUMId );
+
+print_r(
+    DB::getQueryLog()
+);
+</code></pre>
+
+<p>打印结果如下：</p>
+
+<pre><code>Array
+(
+    [0] =&gt; Array
+        (
+            [query] =&gt; select * from `user` where `user`.`user_id` = ? limit 1
+            [bindings] =&gt; Array
+                (
+                    [0] =&gt; 1
+                )
+
+            [time] =&gt; 0.56
+        )
+
+    [1] =&gt; Array
+        (
+            [query] =&gt; select * from `user_ext` where `user_ext`.`user_id` in (?)
+            [bindings] =&gt; Array
+                (
+                    [0] =&gt; 1
+                )
+
+            [time] =&gt; 0.32
+        )
+
+)
+</code></pre>
+
+<p>可以看出，sql先根据user_id查询到主标数据，然后在去依赖表中做in查询，这样确实解决了ORM n+1次查询的问题，但是对于直接使用sql，还是多出一次查询。</p>
+
+<p>这里发现一个比较有趣的事情，log里有一个time值，难道这个是sql执行时间，如果这个是执行时间的话，那就可以简单的验证一下sql执行效率问题了，然后开始查询资料，终于在源码中找到了答案，源码如下：<a href="https://github.com/laravel/framework/blob/da5bdc94574d796b136d607365619506ca67ac50/src/Illuminate/Database/Connection.php#L592">详细链接</a></p>
+
+<pre><code>    /**
+     * Run a SQL statement and log its execution context.
+     *
+     * @param  string   $query
+     * @param  array    $bindings
+     * @param  Closure  $callback
+     * @return mixed
+     *
+     * @throws QueryException
+     */
+    protected function run($query, $bindings, Closure $callback)
+    {
+        $start = microtime(true);
+        // To execute the statement, we&#39;ll simply call the callback, which will actually
+        // run the SQL against the PDO connection. Then we can calculate the time it
+        // took to execute and log the query SQL, bindings and time in our memory.
+        try
+        {
+            $result = $callback($this, $query, $bindings);
+        }
+        // If an exception occurs when attempting to run a query, we&#39;ll format the error
+        // message to include the bindings with SQL, which will make this exception a
+        // lot more helpful to the developer instead of just the database&#39;s errors.
+        catch (\Exception $e)
+        {
+            throw new QueryException($query, $bindings, $e);
+        }
+        // Once we have run the query we will calculate the time that it took to run and
+        // then log the query, bindings, and execution time so we will report them on
+        // the event that the developer needs them. We&#39;ll log time in milliseconds.
+        $time = $this-&gt;getElapsedTime($start);
+        $this-&gt;logQuery($query, $bindings, $time);
+        return $result;
+    }
+
+    /**
+     * Get the elapsed time since a given starting point.
+     *
+     * @param  int    $start
+     * @return float
+     */
+    protected function getElapsedTime($start)
+    {
+        return round((microtime(true) - $start) * 1000, 2);
+    }
+</code></pre>
+
+<p>这里可以看出time就是sql执行时间，而且单位是毫秒.</p>
+
+<p>这里就可以测试单条join和使用eloquent with查询效率对比，代码如下：</p>
+
+<pre><code>DB::enableQueryLog();
+
+DB::table(  &#39;user&#39; )
+    -&gt;leftJoin( &#39;user_ext as ext&#39;, &#39;user.user_id&#39;, &#39;=&#39;, &#39;ext.user_id&#39; )
+    -&gt;where( &#39;user.user_id&#39;, 1 )
+    -&gt;get();
+
+$oUser = CUser::with( &#39;hasOneExt&#39; )-&gt;find( $sUMId );
+
+print_r(
+    DB::getQueryLog()
+);
+</code></pre>
+
+<p>结果如下：</p>
+
+<pre><code>Array
+(
+    [0] =&gt; Array
+        (
+            [query] =&gt; select * from `user` as `user` left join `user_ext` as `ext` on `user`.`user_id` = `ext`.`user_id` where `user`.`user_id` = ?
+            [bindings] =&gt; Array
+                (
+                    [0] =&gt; 1
+                )
+
+            [time] =&gt; 0.65
+        )
+
+    [1] =&gt; Array
+        (
+            [query] =&gt; select * from `user` where `user`.`user_id` = ? limit 1
+            [bindings] =&gt; Array
+                (
+                    [0] =&gt; 1
+                )
+
+            [time] =&gt; 0.35
+        )
+
+    [2] =&gt; Array
+        (
+            [query] =&gt; select * from `user_ext` where `user_ext`.`user_id` in (?)
+            [bindings] =&gt; Array
+                (
+                    [0] =&gt; 1
+                )
+
+            [time] =&gt; 0.35
+        )
+
+)
+</code></pre>
+
+<p>从结果可以看出，执行一条时间相比执行两条时间，差距不是很大，但是客观来说，这说明不了什么问题；首先，测试基于本地数据库，一次请求和两次请求的网络影响及延迟会比线上差距要小很多；其次，本地测试数据库，两个表数据量都在1k，数据量太小，无法反应真实线上数据查询效率。所以这里查询结果仅供参考，后期详细结果，会在本地伪造100w左右数据量进行测试观察，并咨询公司dba，对于大数据量对连表查询效率影响情况。</p>
+
+<h3 id="toc_5">总结</h3>
+
+<p>对于今天解决问题的过程，虽然感觉没有得到完美的答案，但是在查询过程中也学习到不少东西，在这里做一下记录。以备后期温故学习。</p>
+
+<p>这里记录一下几个小细节：</p>
+
+<blockquote>
+<p>数据库查询过程中，为了节省应用服务器与数据库服务器之间网络流量及数据库服务器的IO，数据库查询原则是只查询返回有用字段，对于无用的大字段，特别是text等，不需要时，尽量不查询。数据库查询尽量不要使用selec *</p>
+</blockquote>
+
+<p>Eloquent 联合查询指定字段</p>
+
+<ul>
+<li>方法1</li>
+</ul>
+
+<pre><code>$oUser = CUser::with( [ &#39;hasOneExt&#39; =&gt; function( $query ) {
+        $query-&gt;select( &#39;user_id&#39;, &#39;realname&#39;, &#39;gender&#39;, &#39;birthday&#39; );
+        } ] )-&gt;find( $sUMId, [ &#39;user_id&#39;, &#39;username&#39;, &#39;email&#39;, &#39;user_img&#39; ] );
+        
+</code></pre>
+
+<p>其中\(query-&gt;select( &#39;user_id&#39;, &#39;realname&#39;, &#39;gender&#39;, &#39;birthday&#39; )为查询扩展表字段；find( \)sUMId, [ &#39;user_id&#39;, &#39;username&#39;, &#39;email&#39;, &#39;user_img&#39; ] )为查询主表字段</p>
+
+<ul>
+<li>方法2</li>
+</ul>
+
+<pre><code>public function hasOneExt() {
+    return $this-&gt;hasOne( &#39;App\Http\Models\Eloquent\CUserExt&#39;, &#39;user_id&#39;, &#39;user_id&#39; )
+    -&gt;select( &#39;user_id&#39;, &#39;realname&#39;, &#39;gender&#39;, &#39;birthday&#39; );
+}
+    
+    
+$oUser = CUser::with( &#39;hasOneExt&#39; )-&gt;find( $sUMId, [ &#39;user_id&#39;, &#39;username&#39;, &#39;email&#39;, &#39;user_img&#39; ] );    
+</code></pre>
+
+<p>执行sql结果：</p>
+
+<pre><code>Array
+(
+    [0] =&gt; Array
+        (
+            [query] =&gt; select `user_id`, `username`, `email`, `user_img` from `user` where `user`.`user_id` = ? limit 1
+            [bindings] =&gt; Array
+                (
+                    [0] =&gt; 1
+                )
+
+            [time] =&gt; 0.5
+        )
+
+    [1] =&gt; Array
+        (
+            [query] =&gt; select `user_id`, `realname`, `gender`, `birthday` from `user_ext` where `user_ext`.`user_id` in (?)
+            [bindings] =&gt; Array
+                (
+                    [0] =&gt; 1
+                )
+
+            [time] =&gt; 0.33
+        )
+
+)
+</code></pre>
+
+<hr/>
+
+
+		</div>
+	
+
+  
+  
+</div></div>
+
+
+<div class="page-bottom">
+  <div class="row">
+  <hr />
+  <div class="small-9 columns">
+  <p class="copyright">Copyright &copy; 2015
+Powered by <a target="_blank" href="http://www.mweb.im">MWeb</a>,&nbsp; 
+Theme used <a target="_blank" href="http://github.com">GitHub CSS</a>.</p>
+  </div>
+  <div class="small-3 columns">
+  <p class="copyright text-right"><a href="#header">TOP</a></p>
+  </div>
+   
+  </div>
+</div>
+
+        </section>
+      </div>
+    </div>
+    
+    
+    <script src="asset/js/foundation.min.js"></script>
+    <script src="asset/js/foundation/foundation.offcanvas.js"></script>
+    <script>
+      $(document).foundation();
+
+     
+    </script>
+    
+
+
+  </body>
+</html>
