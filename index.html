@@ -65,6 +65,8 @@
         <li><label>Linux</label></li>
 
           
+            <li><a title="Mysql安装" href="14975769061187.html">Mysql安装</a></li>
+          
             <li><a title="系统安装过程" href="14843811906479.html">系统安装过程</a></li>
           
 
@@ -100,6 +102,8 @@
                     
                       <li class="side-title"><span>Linux</span></li>
                         
+                          <li><a title="Mysql安装" href="14975769061187.html">Mysql安装</a></li>
+                        
                           <li><a title="系统安装过程" href="14843811906479.html">系统安装过程</a></li>
                         
 
@@ -116,232 +120,76 @@
 
 	
 		<div class="markdown-body">
-		<h1>Laravel数据库读写分离配置</h1>
+		<h1>Mysql安装</h1>
 
-		<h3 id="toc_0">配置范例</h3>
+		<ul>
+<li>
+<a href="#toc_0">安装命令</a>
+</li>
+<li>
+<a href="#toc_1">apt-get 安装mysql5.7</a>
+</li>
+<li>
+<a href="#toc_2">安装mysql5.7后，无root密码，无法登陆解决</a>
+</li>
+</ul>
 
-<pre><code>&#39;mysql&#39; =&gt; [
-    &#39;driver&#39;   =&gt; &#39;mysql&#39;,  
-    &#39;write&#39;    =&gt; [  
-        &#39;host&#39; =&gt; &#39;192.168.1.180&#39;,  
-    ],  
-    &#39;read&#39;     =&gt; [
-        [&#39;host&#39; =&gt; &#39;192.168.1.182&#39;],  
-        [&#39;host&#39; =&gt; &#39;192.168.1.179&#39;],  
-    ],
-    ...  
-]
 
-或
+<h3 id="toc_0">安装命令</h3>
 
-&#39;mysql&#39; =&gt; [
-    &#39;driver&#39;   =&gt; &#39;mysql&#39;,  
-    &#39;write&#39;    =&gt; [  
-        &#39;host&#39; =&gt; &#39;192.168.1.180&#39;,  
-    ],  
-    &#39;read&#39;     =&gt; [
-        &#39;host&#39; =&gt; ［
-            &#39;192.168.1.182&#39;,
-            &#39;192.168.1.179&#39;
-        ],  
-    ],
-    ...  
-]
+<pre><code>#ubuntu
+
+$apt-get update
+$apt-get install mysql-server mysql-client
+
+默认安装mysql5.5
 </code></pre>
 
-<p>扩展配置范例</p>
+<h3 id="toc_1">apt-get 安装mysql5.7</h3>
 
-<pre><code>&#39;mysql&#39; =&gt; [
-    &#39;driver&#39;   =&gt; &#39;mysql&#39;,  
-    &#39;write&#39;    =&gt; [  
-        &#39;host&#39;      =&gt; &#39;192.168.1.180&#39;,  
-        &#39;username&#39;  =&gt; &#39;write&#39;,
-        &#39;password&#39;   =&gt; &#39;write&#39;,
-    ],  
-    &#39;read&#39;     =&gt; [
-        [
-            &#39;host&#39; =&gt; &#39;192.168.1.182&#39;,
-            &#39;username&#39;  =&gt; &#39;read1&#39;,
-            &#39;password&#39;   =&gt; &#39;read1&#39;,
-        ],  
-        [
-            &#39;host&#39; =&gt; &#39;192.168.1.179&#39;,
-            &#39;username&#39;  =&gt; &#39;read2&#39;,
-            &#39;password&#39;   =&gt; &#39;read2&#39;,
-        ],  
-    ],
-    ...  
-]
+<pre><code>#step1:添加mysql apt源
+#   1.下载apt源，官网地址：http://dev.mysql.com/downloads/repo/apt/（需要注册用户，csdn下载地址：http://download.csdn.net/detail/wan353694124/9871670）
+#   2.安装源(PATH为你的路径，version-specific-package-name为下载的名字）
+$ sudo dpkg -i /PATH/version-specific-package-name.deb
 
-或者
+#   3.选择mysql版本等
+#   4.执行apt-get update
+$ sudo apt-get update
 
-&#39;mysql&#39; =&gt; [
-    &#39;driver&#39;   =&gt; &#39;mysql&#39;,  
-    &#39;write&#39;    =&gt; [  
-        &#39;host&#39;      =&gt; &#39;192.168.1.180&#39;,  
-        &#39;username&#39;  =&gt; &#39;write&#39;,
-        &#39;password&#39;   =&gt; &#39;write&#39;,
-    ],  
-    &#39;read&#39;     =&gt; [
-       &#39;host&#39; =&gt; ［
-           &#39;192.168.1.179&#39;,
-           &#39;192.168.1.182&#39;,
-       ],
-       &#39;username&#39;  =&gt; &#39;read&#39;,
-       &#39;password&#39;   =&gt; &#39;read&#39;, 
-    ],
-    ...  
-]
+#step2:安装mysql
+$ sudo apt-get install mysql-server
 </code></pre>
 
-<p>公司数据库架构为一主多从，从库访问地址为唯一地址，该处方便负载均衡及扩展从库。所以最终线上采用的配置</p>
+<p>参考：<a href="https://dev.mysql.com/doc/mysql-apt-repo-quick-guide/en/#apt-repo-setup">https://dev.mysql.com/doc/mysql-apt-repo-quick-guide/en/#apt-repo-setup</a></p>
 
-<pre><code>&#39;mysql&#39; =&gt; [
-    &#39;driver&#39;   =&gt; &#39;mysql&#39;,  
-    &#39;write&#39;    =&gt; [  
-        &#39;host&#39;      =&gt; &#39;192.168.1.180&#39;,  
-        &#39;username&#39;  =&gt; &#39;write&#39;,
-        &#39;password&#39;   =&gt; &#39;write&#39;,
-    ],  
-    &#39;read&#39;     =&gt; [
-       &#39;host&#39; =&gt; &#39;192.168.1.179&#39;
-       &#39;username&#39;  =&gt; &#39;read&#39;,
-       &#39;password&#39;   =&gt; &#39;read&#39;, 
-    ],
-    ...   
-]
-</code></pre>
+<h3 id="toc_2">安装mysql5.7后，无root密码，无法登陆解决</h3>
 
-<h3 id="toc_1">代码分析</h3>
+<pre><code># 关闭mysql
+$ sudo service mysql stop
 
-<p>授人以鱼不如授人以渔，之所以配置如此灵活的原因，以及如何查找到这些配置方式。主要通过查找代码，分析代码；相关代码都在下面粘出，这里就不做解释了，代码能说明一切；</p>
+# 运行mysql无密码启动
+$ sudo mysqld_safe --skip-grant-tables &amp;
 
-<p>路径：vendor/laravel/framework/src/Illuminate/Database/Connectors/ConnectionFactory.php</p>
+# 为了安全，可以这样启动，禁止远程连接
+$ sudo mysqld_safe --skip-grant-tables --skip-networking &amp;
 
-<p>代码：</p>
+# 启动后登录mysql
+$ mysql
 
-<pre><code>class ConnectionFactory
-{
-    ...
+# 更改密码
+mysql&gt; update mysql.user set authentication_string=password(&#39;123qwe&#39;) where user=&#39;root&#39; and Host = &#39;localhost&#39;;
+mysql&gt; flush privileges;
+mysql&gt; quit;
 
-    /**
-     * Get the read configuration for a read / write connection.
-     *
-     * @param  array  $config
-     * @return array
-     */
-    protected function getReadConfig(array $config)
-    {
-        $readConfig = $this-&gt;getReadWriteConfig($config, &#39;read&#39;);
-
-        if (isset($readConfig[&#39;host&#39;]) &amp;&amp; is_array($readConfig[&#39;host&#39;])) {
-            $readConfig[&#39;host&#39;] = count($readConfig[&#39;host&#39;]) &gt; 1
-                ? $readConfig[&#39;host&#39;][array_rand($readConfig[&#39;host&#39;])]
-                : $readConfig[&#39;host&#39;][0];
-        }
-
-        return $this-&gt;mergeReadWriteConfig($config, $readConfig);
-    }
-    
-    ...
-    
-    /**
-     * Get a read / write level configuration.
-     *
-     * @param  array   $config
-     * @param  string  $type
-     * @return array
-     */
-    protected function getReadWriteConfig(array $config, $type)
-    {
-        if (isset($config[$type][0])) {
-            return $config[$type][array_rand($config[$type])];
-        }
-
-        return $config[$type];
-    }
-    
-    ...
-    
-    /**
-     * Merge a configuration for a read / write connection.
-     *
-     * @param  array  $config
-     * @param  array  $merge
-     * @return array
-     */
-    protected function mergeReadWriteConfig(array $config, array $merge)
-    {
-        return Arr::except(array_merge($config, $merge), [&#39;read&#39;, &#39;write&#39;]);
-    }
-    
-    ...
-}
-    
-    
-class Arr
-{
-   ...
-   
-   /**
-    * Get all of the given array except for a specified array of items.
-    *
-    * @param  array  $array
-    * @param  array|string  $keys
-    * @return array
-    */
-   public static function except($array, $keys)
-   {
-       static::forget($array, $keys);
-    
-       return $array;
-   }
-   
-   ...
-   
-   /**
-    * Remove one or many array items from a given array using &quot;dot&quot; notation.
-    *
-    * @param  array  $array
-    * @param  array|string  $keys
-    * @return void
-    */
-   public static function forget(&amp;$array, $keys)
-   {
-       $original = &amp;$array;
-    
-       $keys = (array) $keys;
-    
-       if (count($keys) === 0) {
-           return;
-       }
-    
-       foreach ($keys as $key) {
-           $parts = explode(&#39;.&#39;, $key);
-    
-           while (count($parts) &gt; 1) {
-               $part = array_shift($parts);
-    
-               if (isset($array[$part]) &amp;&amp; is_array($array[$part])) {
-                   $array = &amp;$array[$part];
-               } else {
-                   $parts = [];
-               }
-           }
-    
-           unset($array[array_shift($parts)]);
-    
-           // clean up after each pass
-           $array = &amp;$original;
-       }
-   }
-   
-   ...
-}
+# 重启mysql服务
+$ sudo service mysql restart
 </code></pre>
 
 
 		</div>
+	
+
+ 
 	
 
  

@@ -65,6 +65,8 @@
         <li><label>Linux</label></li>
 
           
+            <li><a title="Mysql安装" href="14975769061187.html">Mysql安装</a></li>
+          
             <li><a title="系统安装过程" href="14843811906479.html">系统安装过程</a></li>
           
 
@@ -100,6 +102,8 @@
                     
                       <li class="side-title"><span>Linux</span></li>
                         
+                          <li><a title="Mysql安装" href="14975769061187.html">Mysql安装</a></li>
+                        
                           <li><a title="系统安装过程" href="14843811906479.html">系统安装过程</a></li>
                         
 
@@ -116,259 +120,76 @@
 
 	
 		<div class="markdown-body">
-		<h1>系统安装过程</h1>
+		<h1>Mysql安装</h1>
 
-		<p>双十一剁手，在阿里买了一台ecs服务器，系统 Ubuntu 14.04 64位,购买的时候默认root用户，创建了root密码。</p>
-
-<p>进入新服务器，考虑安全性，准备完成以下服务器配置目标：</p>
-
-<ul>
-<li>创建自己的用户</li>
-<li>能使用sudo权限</li>
-<li>禁用root ssh登录</li>
-<li>使用rsa public key免密码登录</li>
+		<ul>
+<li>
+<a href="#toc_0">安装命令</a>
+</li>
+<li>
+<a href="#toc_1">apt-get 安装mysql5.7</a>
+</li>
+<li>
+<a href="#toc_2">安装mysql5.7后，无root密码，无法登陆解决</a>
+</li>
 </ul>
 
-<h2 id="toc_0">创建自己的用户</h2>
 
-<h4 id="toc_1">1. 创建用户</h4>
+<h3 id="toc_0">安装命令</h3>
 
-<ul>
-<li>命令</li>
-</ul>
+<pre><code>#ubuntu
 
-<pre><code># useradd -d /home/wan -m wan
+$apt-get update
+$apt-get install mysql-server mysql-client
+
+默认安装mysql5.5
 </code></pre>
 
-<ul>
-<li>参数说明<br/></li>
-</ul>
+<h3 id="toc_1">apt-get 安装mysql5.7</h3>
 
-<pre><code>-d, --home HOME_DIR
-    The new user will be created using HOME_DIR as the value for the user&#39;s login directory.
-    
--m, --create-home
-    Create the user&#39;s home directory if it does not exist.
+<pre><code>#step1:添加mysql apt源
+#   1.下载apt源，官网地址：http://dev.mysql.com/downloads/repo/apt/（需要注册用户，csdn下载地址：http://download.csdn.net/detail/wan353694124/9871670）
+#   2.安装源(PATH为你的路径，version-specific-package-name为下载的名字）
+$ sudo dpkg -i /PATH/version-specific-package-name.deb
+
+#   3.选择mysql版本等
+#   4.执行apt-get update
+$ sudo apt-get update
+
+#step2:安装mysql
+$ sudo apt-get install mysql-server
 </code></pre>
 
-<p>创建完成后，查看/home下，ls -l查看了一下目录权限，所有者和所属组都是wan</p>
+<p>参考：<a href="https://dev.mysql.com/doc/mysql-apt-repo-quick-guide/en/#apt-repo-setup">https://dev.mysql.com/doc/mysql-apt-repo-quick-guide/en/#apt-repo-setup</a></p>
 
-<pre><code># ls -al
-total 12
-drwxr-xr-x  3 root root 4096 Nov 13 13:41 .
-drwxr-xr-x 22 root root 4096 Nov 11 01:41 ..
-drwxr-xr-x  2 wan  wan  4096 Nov 13 13:41 wan
+<h3 id="toc_2">安装mysql5.7后，无root密码，无法登陆解决</h3>
+
+<pre><code># 关闭mysql
+$ sudo service mysql stop
+
+# 运行mysql无密码启动
+$ sudo mysqld_safe --skip-grant-tables &amp;
+
+# 为了安全，可以这样启动，禁止远程连接
+$ sudo mysqld_safe --skip-grant-tables --skip-networking &amp;
+
+# 启动后登录mysql
+$ mysql
+
+# 更改密码
+mysql&gt; update mysql.user set authentication_string=password(&#39;123qwe&#39;) where user=&#39;root&#39; and Host = &#39;localhost&#39;;
+mysql&gt; flush privileges;
+mysql&gt; quit;
+
+# 重启mysql服务
+$ sudo service mysql restart
 </code></pre>
-
-<h4 id="toc_2">2. 设置密码</h4>
-
-<ul>
-<li>命令</li>
-</ul>
-
-<pre><code># passwd wan
-Enter new UNIX password:
-Retype new UNIX password:
-</code></pre>
-
-<p>打开一个新窗口，使用新用户登录，登录成功，可是界面有点问题</p>
-
-<pre><code>Welcome to aliyun Elastic Compute Service!
-
-$
-</code></pre>
-
-<p>考虑应该是shell设置问题</p>
-
-<h4 id="toc_3">3. 修改默认shell</h4>
-
-<p>查看一下当前使用shell</p>
-
-<pre><code>$ echo $SHELL
-/bin/sh
-</code></pre>
-
-<p>使用的sh，平时自己用的最多的是bash，考虑修改成bash。</p>
-
-<ul>
-<li>命令</li>
-</ul>
-
-<pre><code>$ chsh -s /bin/bash
-Password:
-</code></pre>
-
-<ul>
-<li>参数说明</li>
-</ul>
-
-<pre><code>chsh - change login shell
-
--s, --shell SHELL
-    The name of the user&#39;s new login shell.
-    
-</code></pre>
-
-<p>这里也可以使用root用户，修改/etc/passwd文件，在自己用户后面添加对应shell</p>
-
-<pre><code># vi /etc/passwd
-
-添加如下：
-wan:x:1000:1000::/home/wan:/bin/bash
-</code></pre>
-
-<p>退出重新登录后</p>
-
-<pre><code>Welcome to aliyun Elastic Compute Service!
-
-Last login: Sun Nov 13 14:06:46 2016
-wan@hostname:~$ 
-wan@hostname:~$ echo $SHELL
-/bin/bash
-</code></pre>
-
-<h2 id="toc_4">使用sudo权限</h2>
-
-<p>通过sudo，我们能把某些超级权限有针对性的下放，并且不需要普通用户知道root密码,所以sudo相对于权限无限制性的su来说，还是比较安全的，所以sudo也能被称为受限制的su；另外sudo 是需要授权许可的，所以也被称为授权许可的su；</p>
-
-<p>sudo 执行命令的流程是当前用户切换到root（或其它指定切换到的用户)，然后以root（或其它指定的切换到的用户）身份执行命令，执行完成后，直接退回到当前用户；而这些的前提是要通过sudo的配置文件/etc/sudoers来进行授权；</p>
-
-<h4 id="toc_5">方式1（添加到sudo组）</h4>
-
-<p>修改/etc/group文件，查找sudo开头的记录行，在该行后添加自己用户名，多个用户名之间用英文逗号隔开，如下：</p>
-
-<pre><code># vi /etc/group
-
-添加如下：
-sudo:x:27:wan   
-</code></pre>
-
-<p>修改完成后重新登录wan用户</p>
-
-<pre><code>Last login: Sun Nov 13 14:18:24 2016
-wan@hostname:~$ id
-uid=1000(wan) gid=1000(wan) groups=1000(wan),27(sudo)
-</code></pre>
-
-<p>添加成功，如果想直接修改所属组，可以使用usermod命令，命令如下：</p>
-
-<pre><code>root@hostname:/# usermod -g sudo wan
-</code></pre>
-
-<p>usermod 与直接修改文件区别：usermod是修改用户所属组；直接修改文件，则是将用户添加到sudo组中</p>
-
-<p>测试sudo命令</p>
-
-<pre><code>wan@hostname:~$ sudo su
-[sudo] password for wan:
-root@hostname:/home/wan#
-</code></pre>
-
-<p>但是中间需要输入自己的用户名，因为服务器是自己玩的，所以安全级别不要这么高，所以设置sudo不需要输入密码</p>
-
-<p>设置sudo组不需要密码</p>
-
-<p>修改/etc/sudoers，添加sudo不需要密码</p>
-
-<pre><code># visudo
-
-修改后效果如下
-%sudo   ALL=(ALL:ALL) NOPASSWD: ALL
-
-ctrl+x退出
-</code></pre>
-
-<h4 id="toc_6">方式2 添加用户到sudo配置文件中</h4>
-
-<p>修改/etc/sudoers，添加wan用户配置，并设置不需要使用密码</p>
-
-<pre><code># visudo
-
-在user privilege中添加如下
-wan    ALL=(ALL:ALL) NOPASSWD: ALL
-</code></pre>
-
-<h2 id="toc_7">禁用root ssh登录</h2>
-
-<p>修改ssh配置文件 /etc/ssh/sshd_config,设置PermitRootLogin为no</p>
-
-<pre><code># vi /etc/ssh/sshd_config
-
-PermitRootLogin no
-</code></pre>
-
-<p>重启ssh服务</p>
-
-<pre><code># service ssh restart
-</code></pre>
-
-<p>退出root用户，测试配置是否生效</p>
-
-<pre><code>ssh root@host
-root@host&#39;s password:
-Permission denied, please try again.
-</code></pre>
-
-<h2 id="toc_8">使用rsa public key免密码登录</h2>
-
-<h4 id="toc_9">1. 设置ssh支持RSA认证登录登录</h4>
-
-<pre><code># vi /etc/ssh/sshd_config
-</code></pre>
-
-<p>取消下面两行注释(前面的＃号）</p>
-
-<pre><code>RSAAuthentication yes
-PubkeyAuthentication yes
-</code></pre>
-
-<p>重启ssh服务</p>
-
-<pre><code># service ssh restart
-</code></pre>
-
-<h4 id="toc_10">2. 设置自己的公钥</h4>
-
-<p>如果在自己电脑上有公钥的话，则直接上传就好啦，公钥位置 ~/.ssh/id_rsa.pub.如果没有，根据自己系统不同，网上有对应生成密钥方法，这里提供参考命令</p>
-
-<pre><code>ssh-keygen –t rsa –P &#39;&#39;
-</code></pre>
-
-<p>拷贝本地pub key到远端服务器（也可以手工打开文件，复制粘贴），服务器上无~/.ssh目录的话，可自己创建</p>
-
-<pre><code>scp ~/.ssh/id_rsa.pub wan@host:~/.ssh
-</code></pre>
-
-<p>将上传公钥添加到授权公钥列表中</p>
-
-<pre><code>$ cat cat ~/.ssh/id_rsa.pub &gt;&gt; ~/.ssh/authorized_keys
-</code></pre>
-
-<p>如果authorized_keys是首次生成，需要设置其权限为600</p>
-
-<pre><code>$ chmod 600 ~/.ssh/authorized_keys
-</code></pre>
-
-<p>测试是否可以免密码登录</p>
-
-<pre><code>ssh wan@host
-Welcome to Ubuntu 14.04.4 LTS (GNU/Linux 3.13.0-86-generic x86_64)
-
- * Documentation:  https://help.ubuntu.com/
-New release &#39;16.04.1 LTS&#39; available.
-Run &#39;do-release-upgrade&#39; to upgrade to it.
-
-
-Welcome to aliyun Elastic Compute Service!
-
-Last login: Sun Nov 13 15:44:07 2016 
-wan@hostname:~$
-</code></pre>
-
-<p>服务器账号设置完成，后续会自己安装php，nginx，redis，mysql等搭建一个简单的应用服务器</p>
 
 
 		</div>
+	
+
+ 
 	
 
   
