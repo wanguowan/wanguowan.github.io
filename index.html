@@ -55,6 +55,8 @@
         <li><label>Laravel</label></li>
 
           
+            <li><a title="Laravel第三方包报class not found" href="15004888347082.html">Laravel第三方包报class not found</a></li>
+          
             <li><a title="Laravel数据库读写分离配置" href="14847498744910.html">Laravel数据库读写分离配置</a></li>
           
             <li><a title="Laravel Eloquent使用小记" href="14843810761202.html">Laravel Eloquent使用小记</a></li>
@@ -94,6 +96,8 @@
                     
                       <li class="side-title"><span>Laravel</span></li>
                         
+                          <li><a title="Laravel第三方包报class not found" href="15004888347082.html">Laravel第三方包报class not found</a></li>
+                        
                           <li><a title="Laravel数据库读写分离配置" href="14847498744910.html">Laravel数据库读写分离配置</a></li>
                         
                           <li><a title="Laravel Eloquent使用小记" href="14843810761202.html">Laravel Eloquent使用小记</a></li>
@@ -120,73 +124,293 @@
 
 	
 		<div class="markdown-body">
-		<h1>Mysql安装</h1>
+		<h1>Laravel第三方包报class not found</h1>
 
-		<ul>
-<li>
-<a href="#toc_0">安装命令</a>
-</li>
-<li>
-<a href="#toc_1">apt-get 安装mysql5.7</a>
-</li>
-<li>
-<a href="#toc_2">安装mysql5.7后，无root密码，无法登陆解决</a>
-</li>
-</ul>
+		<h2 id="toc_0">出现的问题</h2>
 
+<p>公司开发使用PHP，技术框架使用Laravel。最近线上出现一个问题，就是上线之后，每次都会出错。查看出错原因，是composer安装的第三方出现class not found。因为这个问题，在线下使用Lumen框架的时候，遇到过，查找问题原因是因为依赖的composer包中composer.json中的&quot;autoload&quot;:{&quot;psr-4&quot;:{}}书写格式问题。解决方法使用命令：composer dump-autoload -o;</p>
 
-<h3 id="toc_0">安装命令</h3>
+<p>虽然知道问题的所在，但是有一个现象比较费解：这个第三方包已经使用很久了，为什么最近才开始报错呢？下面就开始查找出错原因</p>
 
-<pre><code>#ubuntu
+<h2 id="toc_1">解决方案</h2>
 
-$apt-get update
-$apt-get install mysql-server mysql-client
+<p>如果确认第三方包已安装，并且正确使用use引用了，尝试执行composer dump-autoload -o</p>
 
-默认安装mysql5.5
+<h2 id="toc_2">最终结果</h2>
+
+<p>因为可能篇幅会比较长，所以这里先说明一下最终问题处理结果：原因还未准确定位到，现推测发布服务器环境问题，但因为发布服务器监控服务较多，不允许进行测试，所以具体环境哪个配置导致的问题，还没有定位到。</p>
+
+<p>下面主要介绍问题解决过程：</p>
+
+<pre><code>    1. 查看laravel autoload
+    2. 查看composer源码；
+    3. 重新编译composer打印日志；
+    4. 分析composer install过程；
+    5. 查看php artisan optimize源码
 </code></pre>
 
-<h3 id="toc_1">apt-get 安装mysql5.7</h3>
+<p>对分析查找问题的过程感兴趣的同学可以继续往下看。</p>
 
-<pre><code>#step1:添加mysql apt源
-#   1.下载apt源，官网地址：http://dev.mysql.com/downloads/repo/apt/（需要注册用户，csdn下载地址：http://download.csdn.net/detail/wan353694124/9871670）
-#   2.安装源(PATH为你的路径，version-specific-package-name为下载的名字）
-$ sudo dpkg -i /PATH/version-specific-package-name.deb
+<h2 id="toc_3">问题分析及解决过程</h2>
 
-#   3.选择mysql版本等
-#   4.执行apt-get update
-$ sudo apt-get update
+<h3 id="toc_4">1. 查找class not found原因</h3>
 
-#step2:安装mysql
-$ sudo apt-get install mysql-server
+<h4 id="toc_5">分析</h4>
+
+<p>既然class not found，确认composer包已经安装。那问题就确定在autoload过程</p>
+
+<h4 id="toc_6">查看源码</h4>
+
+<p>首先自动加载入口 public/index.php 中</p>
+
+<pre><code>require __DIR__.&#39;/../bootstrap/autoload.php&#39;;
 </code></pre>
 
-<p>参考：<a href="https://dev.mysql.com/doc/mysql-apt-repo-quick-guide/en/#apt-repo-setup">https://dev.mysql.com/doc/mysql-apt-repo-quick-guide/en/#apt-repo-setup</a></p>
+<p>然后继续进入 bootstrap/autoload.php 文件</p>
 
-<h3 id="toc_2">安装mysql5.7后，无root密码，无法登陆解决</h3>
-
-<pre><code># 关闭mysql
-$ sudo service mysql stop
-
-# 运行mysql无密码启动
-$ sudo mysqld_safe --skip-grant-tables &amp;
-
-# 为了安全，可以这样启动，禁止远程连接
-$ sudo mysqld_safe --skip-grant-tables --skip-networking &amp;
-
-# 启动后登录mysql
-$ mysql
-
-# 更改密码
-mysql&gt; update mysql.user set authentication_string=password(&#39;123qwe&#39;) where user=&#39;root&#39; and Host = &#39;localhost&#39;;
-mysql&gt; flush privileges;
-mysql&gt; quit;
-
-# 重启mysql服务
-$ sudo service mysql restart
+<pre><code>require __DIR__.&#39;/../vendor/autoload.php&#39;;
 </code></pre>
+
+<p>然后继续进入 vendor/autoload.php</p>
+
+<pre><code>//  require 自动加载类
+require_once __DIR__ . &#39;/composer/autoload_real.php&#39;;
+
+//  真正返回文件列表的操作
+return ComposerAutoloaderInit3f39d071b2e74e04102a9c9b6f221123::getLoader();
+</code></pre>
+
+<p>进入getLoader()方法中</p>
+
+<pre><code>public static function getLoader()
+{
+    if (null !== self::$loader) {
+        return self::$loader;
+    }
+
+    //  注册自动加载方法，用来后面初始化ClassLoader类
+    spl_autoload_register(array(&#39;ComposerAutoloaderInit3f39d071b2e74e04102a9c9b6f221123&#39;, &#39;loadClassLoader&#39;), true, true);
+    //  初始化ClassLoarder
+    self::$loader = $loader = new \Composer\Autoload\ClassLoader();
+    spl_autoload_unregister(array(&#39;ComposerAutoloaderInit3f39d071b2e74e04102a9c9b6f221123&#39;, &#39;loadClassLoader&#39;));
+    
+    //  这里zend_loader_file_encoded查了一下，解释为：
+    //  Returns TRUE if the current file was encoded with Zend Guard or FALSE otherwise. If FALSE, consider disabling the Guard Loader
+    //  又查了一下Zend Guard，貌似是php代码加密并提高执行效率的，提高有限，比较鸡肋
+    //  打印了一下，发现不存在这个方法，即!function_exists(&#39;zend_loader_file_encoded&#39;)为true
+    $useStaticLoader = PHP_VERSION_ID &gt;= 50600 &amp;&amp; !defined(&#39;HHVM_VERSION&#39;) &amp;&amp; (!function_exists(&#39;zend_loader_file_encoded&#39;) || !zend_loader_file_encoded());
+    if ($useStaticLoader) {
+        //  程序在这里执行
+        //  引用ComposerStaticInit类
+        require_once __DIR__ . &#39;/autoload_static.php&#39;;
+
+        //  调用ComposerStaticInit类中的getInitializer方法
+        //  主要作用是使用ComposerStaticInit类中的值初始化上面创建的ComposerAutoloader对象中的prefixLengthsPsr4、prefixDirsPsr4、prefixesPsr0、classMap等值
+        call_user_func(\Composer\Autoload\ComposerStaticInit3f39d071b2e74e04102a9c9b6f221123::getInitializer($loader));
+    } else {
+        $map = require __DIR__ . &#39;/autoload_namespaces.php&#39;;
+        foreach ($map as $namespace =&gt; $path) {
+            $loader-&gt;set($namespace, $path);
+        }
+
+        $map = require __DIR__ . &#39;/autoload_psr4.php&#39;;
+        foreach ($map as $namespace =&gt; $path) {
+            $loader-&gt;setPsr4($namespace, $path);
+        }
+
+        $classMap = require __DIR__ . &#39;/autoload_classmap.php&#39;;
+        if ($classMap) {
+            $loader-&gt;addClassMap($classMap);
+        }
+    }
+    
+    //  重点在这个方法
+    $loader-&gt;register(true);
+
+    if ($useStaticLoader) {
+        $includeFiles = Composer\Autoload\ComposerStaticInit3f39d071b2e74e04102a9c9b6f221123::$files;
+    } else {
+        $includeFiles = require __DIR__ . &#39;/autoload_files.php&#39;;
+    }
+    foreach ($includeFiles as $fileIdentifier =&gt; $file) {
+        composerRequire3f39d071b2e74e04102a9c9b6f221123($fileIdentifier, $file);
+    }
+
+    return $loader;
+}
+</code></pre>
+
+<p>ClassLoader的register方法</p>
+
+<pre><code>public function register($prepend = false)
+{
+    //  调用ClassLoader类的loadClass方法
+    spl_autoload_register(array($this, &#39;loadClass&#39;), true, $prepend);
+}
+</code></pre>
+
+<p>ClassLoader类的loadClass方法</p>
+
+<pre><code>public function loadClass($class)
+{
+    //  查找文件，如果查找到文件，则加载文件
+    if ($file = $this-&gt;findFile($class)) {
+        includeFile($file);
+
+        return true;
+    }
+}
+</code></pre>
+
+<p>ClassLoader类的findFile方法</p>
+
+<pre><code>public function findFile($class)
+{
+    // class map lookup
+    //  class map加载方式，我的理解：是通过将类与对应路径生成一个对应表
+    //  该方式优点：加载速度快，相当于查询字典；
+    //  缺点：无法实现自动加载，添加新类后，需要对应维护class map
+    if (isset($this-&gt;classMap[$class])) {
+        return $this-&gt;classMap[$class];
+    }
+    
+    //  $classMapAuthoritative默认值为false，流程到目前，没有设置过该值
+    //  $missingClasses通过查看该方法最后几行，发现作用是记录自动加载过程中不存在的文件
+    //  所以这里第一次加载会返回false
+    if ($this-&gt;classMapAuthoritative || isset($this-&gt;missingClasses[$class])) {
+        return false;
+    }
+    
+    //  APCu 是老牌 PHP 字节码和对象缓存,缓存器 APC 的分支（PS:我也是查的，不懂呀～大家感兴趣可以自己深研究）
+    //  经测试，$this-&gt;apcuPrefix=null
+    if (null !== $this-&gt;apcuPrefix) {
+        $file = apcu_fetch($this-&gt;apcuPrefix.$class, $hit);
+        if ($hit) {
+            return $file;
+        }
+    }
+
+    //  最后一层方法（保证是最后一个方法）
+    $file = $this-&gt;findFileWithExtension($class, &#39;.php&#39;);
+
+    // Search for Hack files if we are running on HHVM
+    if (false === $file &amp;&amp; defined(&#39;HHVM_VERSION&#39;)) {
+        $file = $this-&gt;findFileWithExtension($class, &#39;.hh&#39;);
+    }
+
+    if (null !== $this-&gt;apcuPrefix) {
+        apcu_add($this-&gt;apcuPrefix.$class, $file);
+    }
+
+    //  记录无法找到的类，方便再次加载直接返回
+    if (false === $file) {
+        // Remember that this class does not exist.
+        $this-&gt;missingClasses[$class] = true;
+    }
+
+    return $file;
+}
+</code></pre>
+
+<p>ClassLoader类中findFileWithExtension方法</p>
+
+<pre><code>private function findFileWithExtension($class, $ext)
+{
+    //  终于看到加载psr-4了
+    // PSR-4 lookup
+    //  对路径中的\转换为文件系统中对应路径分隔符并+后缀，
+    //  比如wan\test类，最后处理为wan/test.php(linux下)
+    $logicalPathPsr4 = strtr($class, &#39;\\&#39;, DIRECTORY_SEPARATOR) . $ext;
+
+    //  获得类名中第一个字母，主要用于在ClassLoader中prefixLengthsPsr4快速检索包，并找到对应包前缀长度，后面截取时使用
+    //  对比autoload_static.php中的$prefixLengthsPsr4即可明白作用
+    $first = $class[0];
+    if (isset($this-&gt;prefixLengthsPsr4[$first])) {
+        $subPath = $class;
+        while (false !== $lastPos = strrpos($subPath, &#39;\\&#39;)) {
+            //  从右往左一层层循环类名中的路径
+            $subPath = substr($subPath, 0, $lastPos);
+            $search = $subPath.&#39;\\&#39;;
+            //  找到对应composer包前缀后，取出对应路径，将包前缀截取后，替换成对应的目录路径，即为class所对应文件
+            if (isset($this-&gt;prefixDirsPsr4[$search])) {
+                foreach ($this-&gt;prefixDirsPsr4[$search] as $dir) {
+                    $length = $this-&gt;prefixLengthsPsr4[$first][$search];
+                    if (file_exists($file = $dir . DIRECTORY_SEPARATOR . substr($logicalPathPsr4, $length))) {
+                        return $file;
+                    }
+                }
+            }
+        }
+    }
+    
+    //  到这里psr-4文件就加载完了，后面是psr-0等其他文件加载，这里就不分析了。
+    //  这里分析一下为什么是第三方包psr-4格式错误
+    //  比如包名为wan/lib，即composer安装命令对应composer require wan/lib
+    //  第三方包中autoload psr-4配置为 &quot;psr-4&quot; : { &quot;wan\\&quot; : &quot;src&quot; } 
+    //  （**警告：上面是错误配置，为了举例说明；正确应该是&quot;psr-4&quot; : { &quot;wan\\lib\\&quot; : &quot;src&quot; })
+    //  最终生成的$prefixLengthsPsr4为{&#39;w&#39; =&gt;array (&#39;wan\\&#39; =&gt; 5,),}
+    //  生成$prefixDirsPsr4为&#39;wan\\&#39; =&gt; array (0 =&gt; __DIR__ . &#39;/..&#39; . &#39;/wan/lib/src&#39;,),
+    //  对应上面代码，在最后$file = $dir . DIRECTORY_SEPARATOR . substr($logicalPathPsr4, $length)
+    //  $file拼接出来的路径是vendor/wan/lib/src/lib/$className.php，导致最后无法拼接出正确路径
+
+    // PSR-4 fallback dirs
+    foreach ($this-&gt;fallbackDirsPsr4 as $dir) {
+        if (file_exists($file = $dir . DIRECTORY_SEPARATOR . $logicalPathPsr4)) {
+            return $file;
+        }
+    }
+
+    // PSR-0 lookup
+    if (false !== $pos = strrpos($class, &#39;\\&#39;)) {
+        // namespaced class name
+        $logicalPathPsr0 = substr($logicalPathPsr4, 0, $pos + 1)
+                . strtr(substr($logicalPathPsr4, $pos + 1), &#39;_&#39;, DIRECTORY_SEPARATOR);
+    } else {
+        // PEAR-like class name
+        $logicalPathPsr0 = strtr($class, &#39;_&#39;, DIRECTORY_SEPARATOR) . $ext;
+    }
+
+    if (isset($this-&gt;prefixesPsr0[$first])) {
+        foreach ($this-&gt;prefixesPsr0[$first] as $prefix =&gt; $dirs) {
+            if (0 === strpos($class, $prefix)) {
+                foreach ($dirs as $dir) {
+                    if (file_exists($file = $dir . DIRECTORY_SEPARATOR . $logicalPathPsr0)) {
+                        return $file;
+                    }
+                }
+            }
+        }
+    }
+
+    // PSR-0 fallback dirs
+    foreach ($this-&gt;fallbackDirsPsr0 as $dir) {
+        if (file_exists($file = $dir . DIRECTORY_SEPARATOR . $logicalPathPsr0)) {
+            return $file;
+        }
+    }
+
+    // PSR-0 include paths.
+    if ($this-&gt;useIncludePath &amp;&amp; $file = stream_resolve_include_path($logicalPathPsr0)) {
+        return $file;
+    }
+
+    return false;
+}
+</code></pre>
+
+<h2 id="toc_7">总结</h2>
+
+<p>因为查找过程比较长，导致篇幅也比较长。所以决定拆分成多篇文章说明。</p>
+
+<p>到这里，通过查找问题，把Laravel框架autoload机制源码分析了一遍，也学会了composer包中对应autoload信息中psr-4及classmap信息如何配置。</p>
+
+<p>后续文章中会通过查看分析composer源码及php artisan命令源码，分析为什么本地开发环境及测试环境没有出现class not found情况</p>
 
 
 		</div>
+	
+
+ 
 	
 
  
