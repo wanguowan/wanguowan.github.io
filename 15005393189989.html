@@ -4,8 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
-  
-  
+    
+  跨域请求 - 
   
   </title>
  <meta name="description" content="">
@@ -133,14 +133,10 @@
             </div>
             <div class="large-9 medium-9 columns">
 
- 
+ <div class="markdown-body">
+<h1>跨域请求</h1>
 
-
-	
-		<div class="markdown-body">
-		<h1>跨域请求</h1>
-
-		<h2 id="toc_0">整理原因</h2>
+<h2 id="toc_0">整理原因</h2>
 
 <p>因为做服务端开发，一直对跨域请求只是了解的地步，今天刚好前端有一个问题，找到我，确定问题的时候，走了一些弯路，最后确认问题出在跨域请求上，所以感觉自己对跨域只是了解，而没有进行过整理，所以这里对跨域请求的一些知识进行一些整理</p>
 
@@ -356,29 +352,42 @@
 <p>今天出现的问题是ajax请求后端接口的时候，无法带上cookie，刚开始以为是cookie下发的domain问题；修改后，发现依然无法带上cookie，后来才发现，原来是跨域请求了。跨域请求默认不带cookie。当js设置withCredentials为true，但是Console里会报错，然后查看服务器设置，服务器Access-Control-Allow-Credentials设置为false，修改服务器设置后，问题才完整解决了。</p>
 
 
-		</div>
-	
+</div>
 
- 
-	
+<br /><br />
+<hr />
 
- 
-	
+<div class="row clearfix">
+  <div class="large-6 columns">
+	<div class="text-left" style="padding:15px 0px;">
+		
+	</div>
+  </div>
+  <div class="large-6 columns">
+	<div class="text-right" style="padding:15px 0px;">
+		
+	        <a href="15004888347082.html" 
+	        title="Next Post: Laravel第三方包报class not found">Laravel第三方包报class not found &raquo;</a>
+	    
+	</div>
+  </div>
+</div>
 
- 
-	
+<div class="row">
+<div style="padding:0px 0.93em;" class="share-comments">
 
- 
-	
-
- 
-	
-
- 
-	
-
-  
-  
+</div>
+</div>
+<script type="text/javascript">
+	$(function(){
+		var currentURL = '15005393189989.html';
+		$('#side-nav a').each(function(){
+			if($(this).attr('href') == currentURL){
+				$(this).parent().addClass('active');
+			}
+		});
+	});
+</script>  
 </div></div>
 
 

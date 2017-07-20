@@ -73,6 +73,14 @@
           
 
       
+        <li class="divider"></li>
+        <li><label>前端</label></li>
+
+          
+            <li><a title="跨域请求" href="15005393189989.html">跨域请求</a></li>
+          
+
+      
       </ul>
     </aside>
 
@@ -112,6 +120,12 @@
                         
 
                     
+                      <li class="side-title"><span>前端</span></li>
+                        
+                          <li><a title="跨域请求" href="15005393189989.html">跨域请求</a></li>
+                        
+
+                    
                   </ul>
                 </nav>
                 </div>
@@ -124,290 +138,228 @@
 
 	
 		<div class="markdown-body">
-		<h1>Laravel第三方包报class not found</h1>
+		<h1>跨域请求</h1>
 
-		<h2 id="toc_0">出现的问题</h2>
+		<h2 id="toc_0">整理原因</h2>
 
-<p>公司开发使用PHP，技术框架使用Laravel。最近线上出现一个问题，就是上线之后，每次都会出错。查看出错原因，是composer安装的第三方出现class not found。因为这个问题，在线下使用Lumen框架的时候，遇到过，查找问题原因是因为依赖的composer包中composer.json中的&quot;autoload&quot;:{&quot;psr-4&quot;:{}}书写格式问题。解决方法使用命令：composer dump-autoload -o;</p>
+<p>因为做服务端开发，一直对跨域请求只是了解的地步，今天刚好前端有一个问题，找到我，确定问题的时候，走了一些弯路，最后确认问题出在跨域请求上，所以感觉自己对跨域只是了解，而没有进行过整理，所以这里对跨域请求的一些知识进行一些整理</p>
 
-<p>虽然知道问题的所在，但是有一个现象比较费解：这个第三方包已经使用很久了，为什么最近才开始报错呢？下面就开始查找出错原因</p>
+<h2 id="toc_1">什么算作跨域</h2>
 
-<h2 id="toc_1">解决方案</h2>
+<p>跨域，指浏览器不能执行其他网站的脚本，他是由浏览器同源策略造成的，是浏览器对JavaScript施加的安全限制</p>
 
-<p>如果确认第三方包已安装，并且正确使用use引用了，尝试执行composer dump-autoload -o</p>
+<p>所谓同源是指，域名，协议，端口均相同，举个例子（&quot;源&quot;请求&quot;目标&quot;）</p>
 
-<h2 id="toc_2">最终结果</h2>
+<table>
+<thead>
+<tr>
+<th>源</th>
+<th>目标</th>
+<th>说明</th>
+</tr>
+</thead>
 
-<p>因为可能篇幅会比较长，所以这里先说明一下最终问题处理结果：原因还未准确定位到，现推测发布服务器环境问题，但因为发布服务器监控服务较多，不允许进行测试，所以具体环境哪个配置导致的问题，还没有定位到。</p>
+<tbody>
+<tr>
+<td><a href="http://www.a.com/a.html">http://www.a.com/a.html</a></td>
+<td><a href="http://www.a.com/b.php">http://www.a.com/b.php</a></td>
+<td>非跨域</td>
+</tr>
+<tr>
+<td><a href="http://www.a.com/a.html">http://www.a.com/a.html</a></td>
+<td><a href="http://www.a.com/api/b.php">http://www.a.com/api/b.php</a></td>
+<td>非跨域</td>
+</tr>
+<tr>
+<td><a href="http://www.a.com/a.html">http://www.a.com/a.html</a></td>
+<td><a href="http://www.b.com/b.php">http://www.b.com/b.php</a></td>
+<td>跨域，主域名不同：a/b</td>
+</tr>
+<tr>
+<td><a href="http://www.a.com/a.html">http://www.a.com/a.html</a></td>
+<td><a href="http://api.a.com/b.php">http://api.a.com/b.php</a></td>
+<td>跨域，子域名不同：www/api</td>
+</tr>
+<tr>
+<td><a href="http://www.a.com/a.html">http://www.a.com/a.html</a></td>
+<td><a href="http://www.a.com:8080/b.php">http://www.a.com:8080/b.php</a></td>
+<td>跨域，端口号不同：80/8080</td>
+</tr>
+<tr>
+<td><a href="http://www.a.com/a.html">http://www.a.com/a.html</a></td>
+<td><a href="https://www.a.com/b.php">https://www.a.com/b.php</a></td>
+<td>跨域，协议不同：http/https</td>
+</tr>
+</tbody>
+</table>
 
-<p>下面主要介绍问题解决过程：</p>
+<h2 id="toc_2">跨域解决方法</h2>
 
-<pre><code>    1. 查看laravel autoload
-    2. 查看composer源码；
-    3. 重新编译composer打印日志；
-    4. 分析composer install过程；
-    5. 查看php artisan optimize源码
+<p>网上解决方案说法很多，没有一一验证，我比较熟悉的两种方法</p>
+
+<h4 id="toc_3">JSONP</h4>
+
+<p>原理：JSONP利用了&lt;script&gt;标签可以链接到不同源的JS脚本，来达到跨域请求目的，详细参考<a href="http://www.cnblogs.com/digdeep/p/4170059.html">传送门</a></p>
+
+<p>缺点：</p>
+
+<pre><code>    1. 只能GET请求；
+    2. 因为使用\&lt;script\&gt;标签加载JS脚本，所以受浏览器加载JS源线程数量限制
+    3. 因为JSONP属于脚本注入行为，存在安全隐患
+    4. 需要服务端配合，导致服务端接口无法做成通用接口
+    ...（还有其他缺点，未验证）
 </code></pre>
 
-<p>对分析查找问题的过程感兴趣的同学可以继续往下看。</p>
+<h4 id="toc_4">CORS</h4>
 
-<h2 id="toc_3">问题分析及解决过程</h2>
+<p>原理：CORS(Cross-Origin Resource Sharing)定义了在跨域访问资源时浏览器和服务器之间如何通信。简单点说就是浏览器与服务器之间的一种协议，使用http头部信息让浏览器与服务器互相了解，从而决定请求与响应成功与否（需浏览器支持，也基本都支持～）</p>
 
-<h3 id="toc_4">1. 查找class not found原因</h3>
+<p>下面主要介绍CORS原理</p>
 
-<h4 id="toc_5">分析</h4>
+<h2 id="toc_5">CORS知识整理</h2>
 
-<p>既然class not found，确认composer包已经安装。那问题就确定在autoload过程</p>
+<h4 id="toc_6">CORS大致流程图</h4>
 
-<h4 id="toc_6">查看源码</h4>
-
-<p>首先自动加载入口 public/index.php 中</p>
-
-<pre><code>require __DIR__.&#39;/../bootstrap/autoload.php&#39;;
+<pre><code class="language-sequence">
+    JavaScript-&gt;浏览器: xhr.send();
+    浏览器-&gt;服务器: 预先请求（如果需要）
+    服务器--&gt;浏览器: 预先回应（如果需要）
+    浏览器-&gt;服务器: 实际请求
+    服务器--&gt;浏览器: 实际回应
+    浏览器--&gt;JavaScript: 触发onload或者onerror
 </code></pre>
 
-<p>然后继续进入 bootstrap/autoload.php 文件</p>
+<h4 id="toc_7">CORS分类</h4>
 
-<pre><code>require __DIR__.&#39;/../vendor/autoload.php&#39;;
+<p>CORS可以分为两种：</p>
+
+<ul>
+<li>简单请求</li>
+<li>复杂请求</li>
+</ul>
+
+<p>一个简单请求大致如下：</p>
+
+<ul>
+<li>HTTP方法是下列之一</li>
+</ul>
+
+<pre><code>    * HEAD
+    * GET
+    * POST
 </code></pre>
 
-<p>然后继续进入 vendor/autoload.php</p>
+<ul>
+<li>HTTP头包含</li>
+</ul>
 
-<pre><code>//  require 自动加载类
-require_once __DIR__ . &#39;/composer/autoload_real.php&#39;;
-
-//  真正返回文件列表的操作
-return ComposerAutoloaderInit3f39d071b2e74e04102a9c9b6f221123::getLoader();
+<pre><code>    * Accept
+    * Accept-Language
+    * Content-Language
+    * Last-Event-ID
+    * Content-Type (但仅能是下列之一）
+        ** application/x-www-form-urlencoded
+        ** multipart/form-data
+        ** text/plain
 </code></pre>
 
-<p>进入getLoader()方法中</p>
+<p>任何一个不满足上述要求的请求，即被认为是复杂请求。一个复杂请求不仅有包含通信内容的请求，同时也包含预请求（ preflight request )</p>
 
-<pre><code>public static function getLoader()
-{
-    if (null !== self::$loader) {
-        return self::$loader;
-    }
+<p>下面使用tcpdump抓包验证（tcpdump命令大家可以自己百度，我这是抓取内环网络80端口的报文）<br/>
+<img src="media/15005393189989/15005532320863.png" alt=""/></p>
 
-    //  注册自动加载方法，用来后面初始化ClassLoader类
-    spl_autoload_register(array(&#39;ComposerAutoloaderInit3f39d071b2e74e04102a9c9b6f221123&#39;, &#39;loadClassLoader&#39;), true, true);
-    //  初始化ClassLoarder
-    self::$loader = $loader = new \Composer\Autoload\ClassLoader();
-    spl_autoload_unregister(array(&#39;ComposerAutoloaderInit3f39d071b2e74e04102a9c9b6f221123&#39;, &#39;loadClassLoader&#39;));
-    
-    //  这里zend_loader_file_encoded查了一下，解释为：
-    //  Returns TRUE if the current file was encoded with Zend Guard or FALSE otherwise. If FALSE, consider disabling the Guard Loader
-    //  又查了一下Zend Guard，貌似是php代码加密并提高执行效率的，提高有限，比较鸡肋
-    //  打印了一下，发现不存在这个方法，即!function_exists(&#39;zend_loader_file_encoded&#39;)为true
-    $useStaticLoader = PHP_VERSION_ID &gt;= 50600 &amp;&amp; !defined(&#39;HHVM_VERSION&#39;) &amp;&amp; (!function_exists(&#39;zend_loader_file_encoded&#39;) || !zend_loader_file_encoded());
-    if ($useStaticLoader) {
-        //  程序在这里执行
-        //  引用ComposerStaticInit类
-        require_once __DIR__ . &#39;/autoload_static.php&#39;;
+<p>本地测试使用www.wan1.com下请求www.wan2.com接口，模拟跨域请求，从请求包中可以看到，Refer为www.wan1.com/test.html，请求host为www.wan2.com，请求接口testput</p>
 
-        //  调用ComposerStaticInit类中的getInitializer方法
-        //  主要作用是使用ComposerStaticInit类中的值初始化上面创建的ComposerAutoloader对象中的prefixLengthsPsr4、prefixDirsPsr4、prefixesPsr0、classMap等值
-        call_user_func(\Composer\Autoload\ComposerStaticInit3f39d071b2e74e04102a9c9b6f221123::getInitializer($loader));
-    } else {
-        $map = require __DIR__ . &#39;/autoload_namespaces.php&#39;;
-        foreach ($map as $namespace =&gt; $path) {
-            $loader-&gt;set($namespace, $path);
-        }
+<p>简单请求的发送从报文上看与普通请求没有太大区别，但是在HTTP header中包含了一个域 Origin 的信息（如第二个红框所示）。不过这一项实际上由浏览器代为发送，并不是开发者代码可以触及到的。</p>
 
-        $map = require __DIR__ . &#39;/autoload_psr4.php&#39;;
-        foreach ($map as $namespace =&gt; $path) {
-            $loader-&gt;setPsr4($namespace, $path);
-        }
+<p>下面是HTTP回应<br/>
+<img src="media/15005393189989/tcpdump-pic-2.png" alt=""/></p>
 
-        $classMap = require __DIR__ . &#39;/autoload_classmap.php&#39;;
-        if ($classMap) {
-            $loader-&gt;addClassMap($classMap);
-        }
-    }
-    
-    //  重点在这个方法
-    $loader-&gt;register(true);
+<p>在回应中，CORS相关的项目全都是以 &quot;Access-Control-&quot;作为前缀的，其意义分别如下：</p>
 
-    if ($useStaticLoader) {
-        $includeFiles = Composer\Autoload\ComposerStaticInit3f39d071b2e74e04102a9c9b6f221123::$files;
-    } else {
-        $includeFiles = require __DIR__ . &#39;/autoload_files.php&#39;;
-    }
-    foreach ($includeFiles as $fileIdentifier =&gt; $file) {
-        composerRequire3f39d071b2e74e04102a9c9b6f221123($fileIdentifier, $file);
-    }
+<ul>
+<li>Access-Control-Allow-Origin（必含）- 不可省略，否则请求按失败处理。该项控制数据的可见范围，如果希望数据对任何人都可见，可填写“*”。</li>
+<li>Access-Control-Allow-Credentials（可选）- 该项标志着请求当中是否包含cookies信息，只有一个可选值：true（必须为小写）。如果不包含cookies，请略去该项，而不是填写false。这一项与Ajax请求中withCredentials属性应保持一致，即withCredentials为true时该项也为true；withCredentials为false时，省略该项不写。反之，则会导致请求失败。</li>
+</ul>
 
-    return $loader;
-}
+<p>经测试，如果Access-Control-Allow-Origin服务器下发值为 <a href="http://www.wan3.com%EF%BC%8C%E9%82%A3%E4%B9%88ajax%E4%B8%AD%E6%98%AF%E5%BE%97%E4%B8%8D%E5%88%B0%E6%9C%8D%E5%8A%A1%E5%99%A8%E8%BF%94%E5%9B%9E%E7%9A%84%E5%80%BC%E7%9A%84%EF%BC%8C%E4%BD%86%E6%98%AF%E5%9C%A8Chrome%E4%B8%AD%E5%BC%80%E5%8F%91%E8%80%85%E6%A8%A1%E5%BC%8F%E4%B8%ADNetwork%E4%B8%AD%E4%BC%9A%E7%9C%8B%E5%88%B0%E8%AF%B7%E6%B1%82%E6%AD%A3%E5%B8%B8%E8%BF%94%E5%9B%9E%EF%BC%8C%E5%B9%B6%E8%83%BD%E7%9C%8B%E5%88%B0header%E4%B8%AD%E8%AE%BE%E7%BD%AE%E7%9A%84%E5%80%BC%E4%B8%BAhttp://www.wan3.com%E3%80%82%E5%A6%82%E4%B8%8B%E5%9B%BE%EF%BC%9A">http://www.wan3.com，那么ajax中是得不到服务器返回的值的，但是在Chrome中开发者模式中Network中会看到请求正常返回，并能看到header中设置的值为http://www.wan3.com。如下图：</a><br/>
+<img src="media/15005393189989/chrome-pic-1.png" alt=""/></p>
+
+<p>请求返回值如下图：<br/>
+<img src="media/15005393189989/chrome-pic-2.png" alt=""/></p>
+
+<p>但是在Console会报错，提示权限不允许，如下图：<br/>
+<img src="media/15005393189989/chrome-pic-4.png" alt=""/></p>
+
+<p>可以总结简单请求流程如下</p>
+
+<pre><code class="language-sequence">
+    JavaScript-&gt;浏览器: 简单请求;
+    浏览器-&gt;服务器: 添加Origin
+    服务器--&gt;浏览器: 拒绝访问或允许访问并返回允许的Origin
+    浏览器--&gt;JavaScript: 根据Origin触发onload或者onerror
 </code></pre>
 
-<p>ClassLoader的register方法</p>
+<p>复杂请求</p>
 
-<pre><code>public function register($prepend = false)
-{
-    //  调用ClassLoader类的loadClass方法
-    spl_autoload_register(array($this, &#39;loadClass&#39;), true, $prepend);
-}
+<p>如果仅仅是简单请求，那么即便不用CORS也没有什么大不了，但CORS的复杂请求就令CORS显得更加有用了。简单来说，任何不满足上述简单请求要求的请求，都属于复杂请求。比如说你需要发送PUT、DELETE等HTTP动作，或者发送Content-Type:application/json的内容。</p>
+
+<p>复杂请求表面上看起来和简单请求使用上差不多，但实际上浏览器发送了不止一个请求。其中最先发送的是一种“预请求”，此时作为服务端，也需要返回“预回应”作为响应（即如CORS流程图中所画）。预请求实际上是对服务端的一种权限请求，只有当预请求成功返回，实际请求才开始执行。</p>
+
+<p>使用tcpdump抓包，第一个报文如下：<br/>
+<img src="media/15005393189989/tcpdump-pic-5.png" alt=""/></p>
+
+<p>预请求以OPTIONS请求发送，当中同样包含域，并且还包含了两项CORS特有的内容：</p>
+
+<ul>
+<li>Access-Control-Request-Method - 该项内容为实际请求的种类，可以是GET，POST之类的简单请求，也可以是PUT，DELETE等等。</li>
+<li>Access-Control-Request-Headers - 该项是一个以逗号分隔的列表，当中是复杂请求所使用的的头部（这里为了制造复杂请求，添加了一个key为wan的header值）</li>
+</ul>
+
+<p>显而易见，这个预请求就是在为之后的实际请求发送一个权限请求，在预回应返回的内容当中，服务器端应当对这两项进行回复，以让浏览器确认请求是否能够成功完成。例如，刚才的预请求获得的服务端如下回应<br/>
+<img src="media/15005393189989/tcpdump-pic-6.png" alt=""/></p>
+
+<p>来看预回应当中的项目：</p>
+
+<ul>
+<li>Access-Control-Allow-Origin（必含）- 和简单请求一样的，必含的一个域。</li>
+<li>Access-Control-Allow-Methods（必含）- 这是对预请求当中的Access-Control-Request-Method的回复，这一回复将是一个以逗号分隔的列表。尽管客户端或许只请求某一方法，但是服务端仍然可以返回所有方法，以便客户端将其缓存</li>
+<li>Access-Control-Allow-Headers（当预请求中包含Access-Control-Request-Headers时必须含）- 这是对预请求中Access-Control-Request-Headers的回复，和上面一样是以逗号分隔的列表，可以返回所有支持的头部</li>
+<li>Access-Control-Allow-Credentials（可选）- 和简单请求中相同</li>
+<li>Access-Control-Max-Age（可选）– 以秒为单位的缓存时间。预请求的的发送并非免费午餐，允许时应当尽可能缓存。</li>
+</ul>
+
+<p>一旦预回应返回后，所请求的权限都已满足后，则开始发送实际请求<br/>
+<img src="media/15005393189989/tcpdump-pic-7.png" alt=""/></p>
+
+<p>如图所示即为负责请求中允许添加的header。</p>
+
+<p>实际回应如下图<br/>
+<img src="media/15005393189989/tcpdump-pic-8.png" alt=""/></p>
+
+<p>在这里实际回应与简单请求一样。</p>
+
+<p>总结复杂请求过程</p>
+
+<pre><code class="language-sequence">    JavaScript-&gt;浏览器: xhr.send();
+    浏览器-&gt;服务器: 预先请求，验证权限
+    服务器--&gt;浏览器: 预先回应，权限允许
+    浏览器-&gt;服务器: 实际请求
+    服务器--&gt;浏览器: 实际回应
+    浏览器--&gt;JavaScript: 触发onload或者onerror
 </code></pre>
 
-<p>ClassLoader类的loadClass方法</p>
+<h2 id="toc_8">总结</h2>
 
-<pre><code>public function loadClass($class)
-{
-    //  查找文件，如果查找到文件，则加载文件
-    if ($file = $this-&gt;findFile($class)) {
-        includeFile($file);
+<p>到目前为止，跨域请求到目前为止理论基础就完了。</p>
 
-        return true;
-    }
-}
-</code></pre>
-
-<p>ClassLoader类的findFile方法</p>
-
-<pre><code>public function findFile($class)
-{
-    // class map lookup
-    //  class map加载方式，我的理解：是通过将类与对应路径生成一个对应表
-    //  该方式优点：加载速度快，相当于查询字典；
-    //  缺点：无法实现自动加载，添加新类后，需要对应维护class map
-    if (isset($this-&gt;classMap[$class])) {
-        return $this-&gt;classMap[$class];
-    }
-    
-    //  $classMapAuthoritative默认值为false，流程到目前，没有设置过该值
-    //  $missingClasses通过查看该方法最后几行，发现作用是记录自动加载过程中不存在的文件
-    //  所以这里第一次加载会返回false
-    if ($this-&gt;classMapAuthoritative || isset($this-&gt;missingClasses[$class])) {
-        return false;
-    }
-    
-    //  APCu 是老牌 PHP 字节码和对象缓存,缓存器 APC 的分支（PS:我也是查的，不懂呀～大家感兴趣可以自己深研究）
-    //  经测试，$this-&gt;apcuPrefix=null
-    if (null !== $this-&gt;apcuPrefix) {
-        $file = apcu_fetch($this-&gt;apcuPrefix.$class, $hit);
-        if ($hit) {
-            return $file;
-        }
-    }
-
-    //  最后一层方法（保证是最后一个方法）
-    $file = $this-&gt;findFileWithExtension($class, &#39;.php&#39;);
-
-    // Search for Hack files if we are running on HHVM
-    if (false === $file &amp;&amp; defined(&#39;HHVM_VERSION&#39;)) {
-        $file = $this-&gt;findFileWithExtension($class, &#39;.hh&#39;);
-    }
-
-    if (null !== $this-&gt;apcuPrefix) {
-        apcu_add($this-&gt;apcuPrefix.$class, $file);
-    }
-
-    //  记录无法找到的类，方便再次加载直接返回
-    if (false === $file) {
-        // Remember that this class does not exist.
-        $this-&gt;missingClasses[$class] = true;
-    }
-
-    return $file;
-}
-</code></pre>
-
-<p>ClassLoader类中findFileWithExtension方法</p>
-
-<pre><code>private function findFileWithExtension($class, $ext)
-{
-    //  终于看到加载psr-4了
-    // PSR-4 lookup
-    //  对路径中的\转换为文件系统中对应路径分隔符并+后缀，
-    //  比如wan\test类，最后处理为wan/test.php(linux下)
-    $logicalPathPsr4 = strtr($class, &#39;\\&#39;, DIRECTORY_SEPARATOR) . $ext;
-
-    //  获得类名中第一个字母，主要用于在ClassLoader中prefixLengthsPsr4快速检索包，并找到对应包前缀长度，后面截取时使用
-    //  对比autoload_static.php中的$prefixLengthsPsr4即可明白作用
-    $first = $class[0];
-    if (isset($this-&gt;prefixLengthsPsr4[$first])) {
-        $subPath = $class;
-        while (false !== $lastPos = strrpos($subPath, &#39;\\&#39;)) {
-            //  从右往左一层层循环类名中的路径
-            $subPath = substr($subPath, 0, $lastPos);
-            $search = $subPath.&#39;\\&#39;;
-            //  找到对应composer包前缀后，取出对应路径，将包前缀截取后，替换成对应的目录路径，即为class所对应文件
-            if (isset($this-&gt;prefixDirsPsr4[$search])) {
-                foreach ($this-&gt;prefixDirsPsr4[$search] as $dir) {
-                    $length = $this-&gt;prefixLengthsPsr4[$first][$search];
-                    if (file_exists($file = $dir . DIRECTORY_SEPARATOR . substr($logicalPathPsr4, $length))) {
-                        return $file;
-                    }
-                }
-            }
-        }
-    }
-    
-    //  到这里psr-4文件就加载完了，后面是psr-0等其他文件加载，这里就不分析了。
-    //  这里分析一下为什么是第三方包psr-4格式错误
-    //  比如包名为wan/lib，即composer安装命令对应composer require wan/lib
-    //  第三方包中autoload psr-4配置为 &quot;psr-4&quot; : { &quot;wan\\&quot; : &quot;src&quot; } 
-    //  （**警告：上面是错误配置，为了举例说明；正确应该是&quot;psr-4&quot; : { &quot;wan\\lib\\&quot; : &quot;src&quot; })
-    //  最终生成的$prefixLengthsPsr4为{&#39;w&#39; =&gt;array (&#39;wan\\&#39; =&gt; 5,),}
-    //  生成$prefixDirsPsr4为&#39;wan\\&#39; =&gt; array (0 =&gt; __DIR__ . &#39;/..&#39; . &#39;/wan/lib/src&#39;,),
-    //  对应上面代码，在最后$file = $dir . DIRECTORY_SEPARATOR . substr($logicalPathPsr4, $length)
-    //  $file拼接出来的路径是vendor/wan/lib/src/lib/$className.php，导致最后无法拼接出正确路径
-
-    // PSR-4 fallback dirs
-    foreach ($this-&gt;fallbackDirsPsr4 as $dir) {
-        if (file_exists($file = $dir . DIRECTORY_SEPARATOR . $logicalPathPsr4)) {
-            return $file;
-        }
-    }
-
-    // PSR-0 lookup
-    if (false !== $pos = strrpos($class, &#39;\\&#39;)) {
-        // namespaced class name
-        $logicalPathPsr0 = substr($logicalPathPsr4, 0, $pos + 1)
-                . strtr(substr($logicalPathPsr4, $pos + 1), &#39;_&#39;, DIRECTORY_SEPARATOR);
-    } else {
-        // PEAR-like class name
-        $logicalPathPsr0 = strtr($class, &#39;_&#39;, DIRECTORY_SEPARATOR) . $ext;
-    }
-
-    if (isset($this-&gt;prefixesPsr0[$first])) {
-        foreach ($this-&gt;prefixesPsr0[$first] as $prefix =&gt; $dirs) {
-            if (0 === strpos($class, $prefix)) {
-                foreach ($dirs as $dir) {
-                    if (file_exists($file = $dir . DIRECTORY_SEPARATOR . $logicalPathPsr0)) {
-                        return $file;
-                    }
-                }
-            }
-        }
-    }
-
-    // PSR-0 fallback dirs
-    foreach ($this-&gt;fallbackDirsPsr0 as $dir) {
-        if (file_exists($file = $dir . DIRECTORY_SEPARATOR . $logicalPathPsr0)) {
-            return $file;
-        }
-    }
-
-    // PSR-0 include paths.
-    if ($this-&gt;useIncludePath &amp;&amp; $file = stream_resolve_include_path($logicalPathPsr0)) {
-        return $file;
-    }
-
-    return false;
-}
-</code></pre>
-
-<h2 id="toc_7">总结</h2>
-
-<p>因为查找过程比较长，导致篇幅也比较长。所以决定拆分成多篇文章说明。</p>
-
-<p>到这里，通过查找问题，把Laravel框架autoload机制源码分析了一遍，也学会了composer包中对应autoload信息中psr-4及classmap信息如何配置。</p>
-
-<p>后续文章中会通过查看分析composer源码及php artisan命令源码，分析为什么本地开发环境及测试环境没有出现class not found情况</p>
+<p>今天出现的问题是ajax请求后端接口的时候，无法带上cookie，刚开始以为是cookie下发的domain问题；修改后，发现依然无法带上cookie，后来才发现，原来是跨域请求了。跨域请求默认不带cookie。当js设置withCredentials为true，但是Console里会报错，然后查看服务器设置，服务器Access-Control-Allow-Credentials设置为false，修改服务器设置后，问题才完整解决了。</p>
 
 
 		</div>
+	
+
+ 
 	
 
  
