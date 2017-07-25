@@ -81,6 +81,14 @@
           
 
       
+        <li class="divider"></li>
+        <li><label>Composer</label></li>
+
+          
+            <li><a title="Laravel RawCookie" href="15009665805779.html">Laravel RawCookie</a></li>
+          
+
+      
       </ul>
     </aside>
 
@@ -126,6 +134,12 @@
                         
 
                     
+                      <li class="side-title"><span>Composer</span></li>
+                        
+                          <li><a title="Laravel RawCookie" href="15009665805779.html">Laravel RawCookie</a></li>
+                        
+
+                    
                   </ul>
                 </nav>
                 </div>
@@ -138,225 +152,57 @@
 
 	
 		<div class="markdown-body">
-		<h1>跨域请求</h1>
+		<h1>Laravel RawCookie</h1>
 
-		<h2 id="toc_0">整理原因</h2>
+		<h2 id="toc_0">介绍</h2>
 
-<p>因为做服务端开发，一直对跨域请求只是了解的地步，今天刚好前端有一个问题，找到我，确定问题的时候，走了一些弯路，最后确认问题出在跨域请求上，所以感觉自己对跨域只是了解，而没有进行过整理，所以这里对跨域请求的一些知识进行一些整理</p>
+<p>这里介绍一下自己封装的composer包，wan/raw-cookie。</p>
 
-<h2 id="toc_1">什么算作跨域</h2>
+<p>主要作用是在laravel框架中使用setrawcookie设置cookie值。</p>
 
-<p>跨域，指浏览器不能执行其他网站的脚本，他是由浏览器同源策略造成的，是浏览器对JavaScript施加的安全限制</p>
+<h2 id="toc_1">优势</h2>
 
-<p>所谓同源是指，域名，协议，端口均相同，举个例子（&quot;源&quot;请求&quot;目标&quot;）</p>
+<p>大家可能比较困惑，php不是有原生的setrawcookie吗，Laravel中也有Cookie操作类。这里说明一下写这个包的原因：</p>
 
-<table>
-<thead>
-<tr>
-<th>源</th>
-<th>目标</th>
-<th>说明</th>
-</tr>
-</thead>
+<h3 id="toc_2">1.更加优雅</h3>
 
-<tbody>
-<tr>
-<td><a href="http://www.a.com/a.html">http://www.a.com/a.html</a></td>
-<td><a href="http://www.a.com/b.php">http://www.a.com/b.php</a></td>
-<td>非跨域</td>
-</tr>
-<tr>
-<td><a href="http://www.a.com/a.html">http://www.a.com/a.html</a></td>
-<td><a href="http://www.a.com/api/b.php">http://www.a.com/api/b.php</a></td>
-<td>非跨域</td>
-</tr>
-<tr>
-<td><a href="http://www.a.com/a.html">http://www.a.com/a.html</a></td>
-<td><a href="http://www.b.com/b.php">http://www.b.com/b.php</a></td>
-<td>跨域，主域名不同：a/b</td>
-</tr>
-<tr>
-<td><a href="http://www.a.com/a.html">http://www.a.com/a.html</a></td>
-<td><a href="http://api.a.com/b.php">http://api.a.com/b.php</a></td>
-<td>跨域，子域名不同：www/api</td>
-</tr>
-<tr>
-<td><a href="http://www.a.com/a.html">http://www.a.com/a.html</a></td>
-<td><a href="http://www.a.com:8080/b.php">http://www.a.com:8080/b.php</a></td>
-<td>跨域，端口号不同：80/8080</td>
-</tr>
-<tr>
-<td><a href="http://www.a.com/a.html">http://www.a.com/a.html</a></td>
-<td><a href="https://www.a.com/b.php">https://www.a.com/b.php</a></td>
-<td>跨域，协议不同：http/https</td>
-</tr>
-</tbody>
-</table>
+<p>优雅的原因是什么呢，因原生setcookie及setrawcookie设置后无法取消，对一些业务处理无法进行灵活的支持，这里举一个例子说明一下</p>
 
-<h2 id="toc_2">跨域解决方法</h2>
+<p>比如登录操作，登录成功后，需要下发对应的cookie。这时，登录接口添加了一个登录风险检查功能，就是判断用户登录是否存在风险。如果存在风险，则相应的对用户进行更严格的验证。</p>
 
-<p>网上解决方案说法很多，没有一一验证，我比较熟悉的两种方法</p>
+<p>方式两种：<br/>
+1. 登录成功后，在代码中添加风险检测，如果检测通过，下发cookie；不通过，不下发cookie，返回错误。<br/>
+2. 做一个事后中间件，如果检测到是登录，进行登录风险检测，如果检测通过，继续返回；不通过，取消cookie下发，取消原响应值</p>
 
-<h4 id="toc_3">JSONP</h4>
+<p>分析两种方式：<br/>
+方式1优点：实现逻辑简单；缺点：侵入到业务代码逻辑中，需要对应修改维护业务流程<br/>
+方式2优点：对业务代码无侵入，业务代码可以随时修改自己逻辑而无需关注风险检查调用时机的业务逻辑；缺点：对应实现复杂度会高一些，特别是风险检测参数，需要自己从request及response中获取。</p>
 
-<p>原理：JSONP利用了&lt;script&gt;标签可以链接到不同源的JS脚本，来达到跨域请求目的，详细参考<a href="http://www.cnblogs.com/digdeep/p/4170059.html">传送门</a></p>
+<p>这里我们选择了第二种方案。这里就牵扯到下发cookie的取消。如果使用setcookie将cookie过期的话，在业务中设置的cookie在header中依然可以看到，先设置了cookie的值，然后对应把cookie值设置为空，并过期，存在安全性问题。</p>
 
-<p>缺点：</p>
+<p>使用RawCookie后，通过事后中间件，直到最后返回Response的时候，才真正的执行setcookie或setrawcookie，中间对于使用RawCookie::queue()方法添加的cookie，可以随时删除。</p>
 
-<pre><code>    1. 只能GET请求；
-    2. 因为使用\&lt;script\&gt;标签加载JS脚本，所以受浏览器加载JS源线程数量限制
-    3. 因为JSONP属于脚本注入行为，存在安全隐患
-    4. 需要服务端配合，导致服务端接口无法做成通用接口
-    ...（还有其他缺点，未验证）
-</code></pre>
+<h3 id="toc_3">2.添加setrawcookie操作</h3>
 
-<h4 id="toc_4">CORS</h4>
+<p>Laravel 5.1及Laravel 5.2版本中，Cookie::queue方法，无法指定cookie的value值不做urlencode操作。</p>
 
-<p>原理：CORS(Cross-Origin Resource Sharing)定义了在跨域访问资源时浏览器和服务器之间如何通信。简单点说就是浏览器与服务器之间的一种协议，使用http头部信息让浏览器与服务器互相了解，从而决定请求与响应成功与否（需浏览器支持，也基本都支持～）</p>
+<p>Laravel 5.3以后，Laravel自带的Cookie已经支持该方法。因为我们线上Laravel版本都是5.1，所以这里自己封装RawCookie，使其支持类似RawCookie::queue()操作，并添加raw参数，根据raw参数判断，最终使用setcookie还是setrawcookie。</p>
 
-<p>下面主要介绍CORS原理</p>
+<h2 id="toc_4">使用</h2>
 
-<h2 id="toc_5">CORS知识整理</h2>
+<p>使用composer require wan/raw-cookie安装。</p>
 
-<h4 id="toc_6">CORS大致流程图</h4>
+<p>当前只支持Laravel框架，主要是对Laravel框架中的Cookie及CookieJar进行包装。</p>
 
-<pre><code class="language-sequence">
-    JavaScript-&gt;浏览器: xhr.send();
-    浏览器-&gt;服务器: 预先请求（如果需要）
-    服务器--&gt;浏览器: 预先回应（如果需要）
-    浏览器-&gt;服务器: 实际请求
-    服务器--&gt;浏览器: 实际回应
-    浏览器--&gt;JavaScript: 触发onload或者onerror
-</code></pre>
+<p>具体集成见项目README</p>
 
-<h4 id="toc_7">CORS分类</h4>
-
-<p>CORS可以分为两种：</p>
-
-<ul>
-<li>简单请求</li>
-<li>复杂请求</li>
-</ul>
-
-<p>一个简单请求大致如下：</p>
-
-<ul>
-<li>HTTP方法是下列之一</li>
-</ul>
-
-<pre><code>    * HEAD
-    * GET
-    * POST
-</code></pre>
-
-<ul>
-<li>HTTP头包含</li>
-</ul>
-
-<pre><code>    * Accept
-    * Accept-Language
-    * Content-Language
-    * Last-Event-ID
-    * Content-Type (但仅能是下列之一）
-        ** application/x-www-form-urlencoded
-        ** multipart/form-data
-        ** text/plain
-</code></pre>
-
-<p>任何一个不满足上述要求的请求，即被认为是复杂请求。一个复杂请求不仅有包含通信内容的请求，同时也包含预请求（ preflight request )</p>
-
-<p>下面使用tcpdump抓包验证（tcpdump命令大家可以自己百度，我这是抓取内环网络80端口的报文）<br/>
-<img src="media/15005393189989/15005532320863.png" alt=""/></p>
-
-<p>本地测试使用www.wan1.com下请求www.wan2.com接口，模拟跨域请求，从请求包中可以看到，Refer为www.wan1.com/test.html，请求host为www.wan2.com，请求接口testput</p>
-
-<p>简单请求的发送从报文上看与普通请求没有太大区别，但是在HTTP header中包含了一个域 Origin 的信息（如第二个红框所示）。不过这一项实际上由浏览器代为发送，并不是开发者代码可以触及到的。</p>
-
-<p>下面是HTTP回应<br/>
-<img src="media/15005393189989/tcpdump-pic-2.png" alt=""/></p>
-
-<p>在回应中，CORS相关的项目全都是以 &quot;Access-Control-&quot;作为前缀的，其意义分别如下：</p>
-
-<ul>
-<li>Access-Control-Allow-Origin（必含）- 不可省略，否则请求按失败处理。该项控制数据的可见范围，如果希望数据对任何人都可见，可填写“*”。</li>
-<li>Access-Control-Allow-Credentials（可选）- 该项标志着请求当中是否包含cookies信息，只有一个可选值：true（必须为小写）。如果不包含cookies，请略去该项，而不是填写false。这一项与Ajax请求中withCredentials属性应保持一致，即withCredentials为true时该项也为true；withCredentials为false时，省略该项不写。反之，则会导致请求失败。</li>
-</ul>
-
-<p>经测试，如果Access-Control-Allow-Origin服务器下发值为 <a href="http://www.wan3.com%EF%BC%8C%E9%82%A3%E4%B9%88ajax%E4%B8%AD%E6%98%AF%E5%BE%97%E4%B8%8D%E5%88%B0%E6%9C%8D%E5%8A%A1%E5%99%A8%E8%BF%94%E5%9B%9E%E7%9A%84%E5%80%BC%E7%9A%84%EF%BC%8C%E4%BD%86%E6%98%AF%E5%9C%A8Chrome%E4%B8%AD%E5%BC%80%E5%8F%91%E8%80%85%E6%A8%A1%E5%BC%8F%E4%B8%ADNetwork%E4%B8%AD%E4%BC%9A%E7%9C%8B%E5%88%B0%E8%AF%B7%E6%B1%82%E6%AD%A3%E5%B8%B8%E8%BF%94%E5%9B%9E%EF%BC%8C%E5%B9%B6%E8%83%BD%E7%9C%8B%E5%88%B0header%E4%B8%AD%E8%AE%BE%E7%BD%AE%E7%9A%84%E5%80%BC%E4%B8%BAhttp://www.wan3.com%E3%80%82%E5%A6%82%E4%B8%8B%E5%9B%BE%EF%BC%9A">http://www.wan3.com，那么ajax中是得不到服务器返回的值的，但是在Chrome中开发者模式中Network中会看到请求正常返回，并能看到header中设置的值为http://www.wan3.com。如下图：</a><br/>
-<img src="media/15005393189989/chrome-pic-1.png" alt=""/></p>
-
-<p>请求返回值如下图：<br/>
-<img src="media/15005393189989/chrome-pic-2.png" alt=""/></p>
-
-<p>但是在Console会报错，提示权限不允许，如下图：<br/>
-<img src="media/15005393189989/chrome-pic-4.png" alt=""/></p>
-
-<p>可以总结简单请求流程如下</p>
-
-<pre><code class="language-sequence">
-    JavaScript-&gt;浏览器: 简单请求;
-    浏览器-&gt;服务器: 添加Origin
-    服务器--&gt;浏览器: 拒绝访问或允许访问并返回允许的Origin
-    浏览器--&gt;JavaScript: 根据Origin触发onload或者onerror
-</code></pre>
-
-<p>复杂请求</p>
-
-<p>如果仅仅是简单请求，那么即便不用CORS也没有什么大不了，但CORS的复杂请求就令CORS显得更加有用了。简单来说，任何不满足上述简单请求要求的请求，都属于复杂请求。比如说你需要发送PUT、DELETE等HTTP动作，或者发送Content-Type:application/json的内容。</p>
-
-<p>复杂请求表面上看起来和简单请求使用上差不多，但实际上浏览器发送了不止一个请求。其中最先发送的是一种“预请求”，此时作为服务端，也需要返回“预回应”作为响应（即如CORS流程图中所画）。预请求实际上是对服务端的一种权限请求，只有当预请求成功返回，实际请求才开始执行。</p>
-
-<p>使用tcpdump抓包，第一个报文如下：<br/>
-<img src="media/15005393189989/tcpdump-pic-5.png" alt=""/></p>
-
-<p>预请求以OPTIONS请求发送，当中同样包含域，并且还包含了两项CORS特有的内容：</p>
-
-<ul>
-<li>Access-Control-Request-Method - 该项内容为实际请求的种类，可以是GET，POST之类的简单请求，也可以是PUT，DELETE等等。</li>
-<li>Access-Control-Request-Headers - 该项是一个以逗号分隔的列表，当中是复杂请求所使用的的头部（这里为了制造复杂请求，添加了一个key为wan的header值）</li>
-</ul>
-
-<p>显而易见，这个预请求就是在为之后的实际请求发送一个权限请求，在预回应返回的内容当中，服务器端应当对这两项进行回复，以让浏览器确认请求是否能够成功完成。例如，刚才的预请求获得的服务端如下回应<br/>
-<img src="media/15005393189989/tcpdump-pic-6.png" alt=""/></p>
-
-<p>来看预回应当中的项目：</p>
-
-<ul>
-<li>Access-Control-Allow-Origin（必含）- 和简单请求一样的，必含的一个域。</li>
-<li>Access-Control-Allow-Methods（必含）- 这是对预请求当中的Access-Control-Request-Method的回复，这一回复将是一个以逗号分隔的列表。尽管客户端或许只请求某一方法，但是服务端仍然可以返回所有方法，以便客户端将其缓存</li>
-<li>Access-Control-Allow-Headers（当预请求中包含Access-Control-Request-Headers时必须含）- 这是对预请求中Access-Control-Request-Headers的回复，和上面一样是以逗号分隔的列表，可以返回所有支持的头部</li>
-<li>Access-Control-Allow-Credentials（可选）- 和简单请求中相同</li>
-<li>Access-Control-Max-Age（可选）– 以秒为单位的缓存时间。预请求的的发送并非免费午餐，允许时应当尽可能缓存。</li>
-</ul>
-
-<p>一旦预回应返回后，所请求的权限都已满足后，则开始发送实际请求<br/>
-<img src="media/15005393189989/tcpdump-pic-7.png" alt=""/></p>
-
-<p>如图所示即为负责请求中允许添加的header。</p>
-
-<p>实际回应如下图<br/>
-<img src="media/15005393189989/tcpdump-pic-8.png" alt=""/></p>
-
-<p>在这里实际回应与简单请求一样。</p>
-
-<p>总结复杂请求过程</p>
-
-<pre><code class="language-sequence">    JavaScript-&gt;浏览器: xhr.send();
-    浏览器-&gt;服务器: 预先请求，验证权限
-    服务器--&gt;浏览器: 预先回应，权限允许
-    浏览器-&gt;服务器: 实际请求
-    服务器--&gt;浏览器: 实际回应
-    浏览器--&gt;JavaScript: 触发onload或者onerror
-</code></pre>
-
-<h2 id="toc_8">总结</h2>
-
-<p>到目前为止，跨域请求到目前为止理论基础就完了。</p>
-
-<p>今天出现的问题是ajax请求后端接口的时候，无法带上cookie，刚开始以为是cookie下发的domain问题；修改后，发现依然无法带上cookie，后来才发现，原来是跨域请求了。跨域请求默认不带cookie。当js设置withCredentials为true，但是Console里会报错，然后查看服务器设置，服务器Access-Control-Allow-Credentials设置为false，修改服务器设置后，问题才完整解决了。</p>
+<p>github地址：<a href="https://github.com/wanguowan/composer.RawCookie">https://github.com/wanguowan/composer.RawCookie</a></p>
 
 
 		</div>
+	
+
+ 
 	
 
  

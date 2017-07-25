@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
     
-  Laravel数据库读写分离配置 - 
+  Laravel RawCookie - 
   
   </title>
  <meta name="description" content="">
@@ -148,229 +148,51 @@
             <div class="large-9 medium-9 columns">
 
  <div class="markdown-body">
-<h1>Laravel数据库读写分离配置</h1>
+<h1>Laravel RawCookie</h1>
 
-<h3 id="toc_0">配置范例</h3>
+<h2 id="toc_0">介绍</h2>
 
-<pre><code>&#39;mysql&#39; =&gt; [
-    &#39;driver&#39;   =&gt; &#39;mysql&#39;,  
-    &#39;write&#39;    =&gt; [  
-        &#39;host&#39; =&gt; &#39;192.168.1.180&#39;,  
-    ],  
-    &#39;read&#39;     =&gt; [
-        [&#39;host&#39; =&gt; &#39;192.168.1.182&#39;],  
-        [&#39;host&#39; =&gt; &#39;192.168.1.179&#39;],  
-    ],
-    ...  
-]
+<p>这里介绍一下自己封装的composer包，wan/raw-cookie。</p>
 
-或
+<p>主要作用是在laravel框架中使用setrawcookie设置cookie值。</p>
 
-&#39;mysql&#39; =&gt; [
-    &#39;driver&#39;   =&gt; &#39;mysql&#39;,  
-    &#39;write&#39;    =&gt; [  
-        &#39;host&#39; =&gt; &#39;192.168.1.180&#39;,  
-    ],  
-    &#39;read&#39;     =&gt; [
-        &#39;host&#39; =&gt; ［
-            &#39;192.168.1.182&#39;,
-            &#39;192.168.1.179&#39;
-        ],  
-    ],
-    ...  
-]
-</code></pre>
+<h2 id="toc_1">优势</h2>
 
-<p>扩展配置范例</p>
+<p>大家可能比较困惑，php不是有原生的setrawcookie吗，Laravel中也有Cookie操作类。这里说明一下写这个包的原因：</p>
 
-<pre><code>&#39;mysql&#39; =&gt; [
-    &#39;driver&#39;   =&gt; &#39;mysql&#39;,  
-    &#39;write&#39;    =&gt; [  
-        &#39;host&#39;      =&gt; &#39;192.168.1.180&#39;,  
-        &#39;username&#39;  =&gt; &#39;write&#39;,
-        &#39;password&#39;   =&gt; &#39;write&#39;,
-    ],  
-    &#39;read&#39;     =&gt; [
-        [
-            &#39;host&#39; =&gt; &#39;192.168.1.182&#39;,
-            &#39;username&#39;  =&gt; &#39;read1&#39;,
-            &#39;password&#39;   =&gt; &#39;read1&#39;,
-        ],  
-        [
-            &#39;host&#39; =&gt; &#39;192.168.1.179&#39;,
-            &#39;username&#39;  =&gt; &#39;read2&#39;,
-            &#39;password&#39;   =&gt; &#39;read2&#39;,
-        ],  
-    ],
-    ...  
-]
+<h3 id="toc_2">1.更加优雅</h3>
 
-或者
+<p>优雅的原因是什么呢，因原生setcookie及setrawcookie设置后无法取消，对一些业务处理无法进行灵活的支持，这里举一个例子说明一下</p>
 
-&#39;mysql&#39; =&gt; [
-    &#39;driver&#39;   =&gt; &#39;mysql&#39;,  
-    &#39;write&#39;    =&gt; [  
-        &#39;host&#39;      =&gt; &#39;192.168.1.180&#39;,  
-        &#39;username&#39;  =&gt; &#39;write&#39;,
-        &#39;password&#39;   =&gt; &#39;write&#39;,
-    ],  
-    &#39;read&#39;     =&gt; [
-       &#39;host&#39; =&gt; ［
-           &#39;192.168.1.179&#39;,
-           &#39;192.168.1.182&#39;,
-       ],
-       &#39;username&#39;  =&gt; &#39;read&#39;,
-       &#39;password&#39;   =&gt; &#39;read&#39;, 
-    ],
-    ...  
-]
-</code></pre>
+<p>比如登录操作，登录成功后，需要下发对应的cookie。这时，登录接口添加了一个登录风险检查功能，就是判断用户登录是否存在风险。如果存在风险，则相应的对用户进行更严格的验证。</p>
 
-<p>公司数据库架构为一主多从，从库访问地址为唯一地址，该处方便负载均衡及扩展从库。所以最终线上采用的配置</p>
+<p>方式两种：<br/>
+1. 登录成功后，在代码中添加风险检测，如果检测通过，下发cookie；不通过，不下发cookie，返回错误。<br/>
+2. 做一个事后中间件，如果检测到是登录，进行登录风险检测，如果检测通过，继续返回；不通过，取消cookie下发，取消原响应值</p>
 
-<pre><code>&#39;mysql&#39; =&gt; [
-    &#39;driver&#39;   =&gt; &#39;mysql&#39;,  
-    &#39;write&#39;    =&gt; [  
-        &#39;host&#39;      =&gt; &#39;192.168.1.180&#39;,  
-        &#39;username&#39;  =&gt; &#39;write&#39;,
-        &#39;password&#39;   =&gt; &#39;write&#39;,
-    ],  
-    &#39;read&#39;     =&gt; [
-       &#39;host&#39; =&gt; &#39;192.168.1.179&#39;
-       &#39;username&#39;  =&gt; &#39;read&#39;,
-       &#39;password&#39;   =&gt; &#39;read&#39;, 
-    ],
-    ...   
-]
-</code></pre>
+<p>分析两种方式：<br/>
+方式1优点：实现逻辑简单；缺点：侵入到业务代码逻辑中，需要对应修改维护业务流程<br/>
+方式2优点：对业务代码无侵入，业务代码可以随时修改自己逻辑而无需关注风险检查调用时机的业务逻辑；缺点：对应实现复杂度会高一些，特别是风险检测参数，需要自己从request及response中获取。</p>
 
-<h3 id="toc_1">代码分析</h3>
+<p>这里我们选择了第二种方案。这里就牵扯到下发cookie的取消。如果使用setcookie将cookie过期的话，在业务中设置的cookie在header中依然可以看到，先设置了cookie的值，然后对应把cookie值设置为空，并过期，存在安全性问题。</p>
 
-<p>授人以鱼不如授人以渔，之所以配置如此灵活的原因，以及如何查找到这些配置方式。主要通过查找代码，分析代码；相关代码都在下面粘出，这里就不做解释了，代码能说明一切；</p>
+<p>使用RawCookie后，通过事后中间件，直到最后返回Response的时候，才真正的执行setcookie或setrawcookie，中间对于使用RawCookie::queue()方法添加的cookie，可以随时删除。</p>
 
-<p>路径：vendor/laravel/framework/src/Illuminate/Database/Connectors/ConnectionFactory.php</p>
+<h3 id="toc_3">2.添加setrawcookie操作</h3>
 
-<p>代码：</p>
+<p>Laravel 5.1及Laravel 5.2版本中，Cookie::queue方法，无法指定cookie的value值不做urlencode操作。</p>
 
-<pre><code>class ConnectionFactory
-{
-    ...
+<p>Laravel 5.3以后，Laravel自带的Cookie已经支持该方法。因为我们线上Laravel版本都是5.1，所以这里自己封装RawCookie，使其支持类似RawCookie::queue()操作，并添加raw参数，根据raw参数判断，最终使用setcookie还是setrawcookie。</p>
 
-    /**
-     * Get the read configuration for a read / write connection.
-     *
-     * @param  array  $config
-     * @return array
-     */
-    protected function getReadConfig(array $config)
-    {
-        $readConfig = $this-&gt;getReadWriteConfig($config, &#39;read&#39;);
+<h2 id="toc_4">使用</h2>
 
-        if (isset($readConfig[&#39;host&#39;]) &amp;&amp; is_array($readConfig[&#39;host&#39;])) {
-            $readConfig[&#39;host&#39;] = count($readConfig[&#39;host&#39;]) &gt; 1
-                ? $readConfig[&#39;host&#39;][array_rand($readConfig[&#39;host&#39;])]
-                : $readConfig[&#39;host&#39;][0];
-        }
+<p>使用composer require wan/raw-cookie安装。</p>
 
-        return $this-&gt;mergeReadWriteConfig($config, $readConfig);
-    }
-    
-    ...
-    
-    /**
-     * Get a read / write level configuration.
-     *
-     * @param  array   $config
-     * @param  string  $type
-     * @return array
-     */
-    protected function getReadWriteConfig(array $config, $type)
-    {
-        if (isset($config[$type][0])) {
-            return $config[$type][array_rand($config[$type])];
-        }
+<p>当前只支持Laravel框架，主要是对Laravel框架中的Cookie及CookieJar进行包装。</p>
 
-        return $config[$type];
-    }
-    
-    ...
-    
-    /**
-     * Merge a configuration for a read / write connection.
-     *
-     * @param  array  $config
-     * @param  array  $merge
-     * @return array
-     */
-    protected function mergeReadWriteConfig(array $config, array $merge)
-    {
-        return Arr::except(array_merge($config, $merge), [&#39;read&#39;, &#39;write&#39;]);
-    }
-    
-    ...
-}
-    
-    
-class Arr
-{
-   ...
-   
-   /**
-    * Get all of the given array except for a specified array of items.
-    *
-    * @param  array  $array
-    * @param  array|string  $keys
-    * @return array
-    */
-   public static function except($array, $keys)
-   {
-       static::forget($array, $keys);
-    
-       return $array;
-   }
-   
-   ...
-   
-   /**
-    * Remove one or many array items from a given array using &quot;dot&quot; notation.
-    *
-    * @param  array  $array
-    * @param  array|string  $keys
-    * @return void
-    */
-   public static function forget(&amp;$array, $keys)
-   {
-       $original = &amp;$array;
-    
-       $keys = (array) $keys;
-    
-       if (count($keys) === 0) {
-           return;
-       }
-    
-       foreach ($keys as $key) {
-           $parts = explode(&#39;.&#39;, $key);
-    
-           while (count($parts) &gt; 1) {
-               $part = array_shift($parts);
-    
-               if (isset($array[$part]) &amp;&amp; is_array($array[$part])) {
-                   $array = &amp;$array[$part];
-               } else {
-                   $parts = [];
-               }
-           }
-    
-           unset($array[array_shift($parts)]);
-    
-           // clean up after each pass
-           $array = &amp;$original;
-       }
-   }
-   
-   ...
-}
-</code></pre>
+<p>具体集成见项目README</p>
+
+<p>github地址：<a href="https://github.com/wanguowan/composer.RawCookie">https://github.com/wanguowan/composer.RawCookie</a></p>
 
 
 </div>
@@ -382,15 +204,13 @@ class Arr
   <div class="large-6 columns">
 	<div class="text-left" style="padding:15px 0px;">
 		
-	        <a href="14975769061187.html"  title="Previous Post: Mysql安装">&laquo; Mysql安装</a>
-	    
 	</div>
   </div>
   <div class="large-6 columns">
 	<div class="text-right" style="padding:15px 0px;">
 		
-	        <a href="14843811906479.html" 
-	        title="Next Post: 系统安装过程">系统安装过程 &raquo;</a>
+	        <a href="15005393189989.html" 
+	        title="Next Post: 跨域请求">跨域请求 &raquo;</a>
 	    
 	</div>
   </div>
@@ -403,7 +223,7 @@ class Arr
 </div>
 <script type="text/javascript">
 	$(function(){
-		var currentURL = '14847498744910.html';
+		var currentURL = '15009665805779.html';
 		$('#side-nav a').each(function(){
 			if($(this).attr('href') == currentURL){
 				$(this).parent().addClass('active');

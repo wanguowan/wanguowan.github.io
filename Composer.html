@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
     
-  Mysql安装 - 
+  Composer - 
   
   </title>
  <meta name="description" content="">
@@ -147,111 +147,63 @@
             </div>
             <div class="large-9 medium-9 columns">
 
- <div class="markdown-body">
-<h1>Mysql安装</h1>
-
-<ul>
-<li>
-<a href="#toc_0">安装命令</a>
-</li>
-<li>
-<a href="#toc_1">apt-get 安装mysql5.7</a>
-</li>
-<li>
-<a href="#toc_2">安装mysql5.7后，无root密码，无法登陆解决</a>
-</li>
-</ul>
+ 
 
 
-<h3 id="toc_0">安装命令</h3>
+	
+		<div class="markdown-body">
+		<h1>Laravel RawCookie</h1>
 
-<pre><code>#ubuntu
+		<h2 id="toc_0">介绍</h2>
 
-$apt-get update
-$apt-get install mysql-server mysql-client
+<p>这里介绍一下自己封装的composer包，wan/raw-cookie。</p>
 
-默认安装mysql5.5
-</code></pre>
+<p>主要作用是在laravel框架中使用setrawcookie设置cookie值。</p>
 
-<h3 id="toc_1">apt-get 安装mysql5.7</h3>
+<h2 id="toc_1">优势</h2>
 
-<pre><code>#step1:添加mysql apt源
-#   1.下载apt源，官网地址：http://dev.mysql.com/downloads/repo/apt/（需要注册用户，csdn下载地址：http://download.csdn.net/detail/wan353694124/9871670）
-#   2.安装源(PATH为你的路径，version-specific-package-name为下载的名字）
-$ sudo dpkg -i /PATH/version-specific-package-name.deb
+<p>大家可能比较困惑，php不是有原生的setrawcookie吗，Laravel中也有Cookie操作类。这里说明一下写这个包的原因：</p>
 
-#   3.选择mysql版本等
-#   4.执行apt-get update
-$ sudo apt-get update
+<h3 id="toc_2">1.更加优雅</h3>
 
-#step2:安装mysql
-$ sudo apt-get install mysql-server
-</code></pre>
+<p>优雅的原因是什么呢，因原生setcookie及setrawcookie设置后无法取消，对一些业务处理无法进行灵活的支持，这里举一个例子说明一下</p>
 
-<p>参考：<a href="https://dev.mysql.com/doc/mysql-apt-repo-quick-guide/en/#apt-repo-setup">https://dev.mysql.com/doc/mysql-apt-repo-quick-guide/en/#apt-repo-setup</a></p>
+<p>比如登录操作，登录成功后，需要下发对应的cookie。这时，登录接口添加了一个登录风险检查功能，就是判断用户登录是否存在风险。如果存在风险，则相应的对用户进行更严格的验证。</p>
 
-<h3 id="toc_2">安装mysql5.7后，无root密码，无法登陆解决</h3>
+<p>方式两种：<br/>
+1. 登录成功后，在代码中添加风险检测，如果检测通过，下发cookie；不通过，不下发cookie，返回错误。<br/>
+2. 做一个事后中间件，如果检测到是登录，进行登录风险检测，如果检测通过，继续返回；不通过，取消cookie下发，取消原响应值</p>
 
-<pre><code># 关闭mysql
-$ sudo service mysql stop
+<p>分析两种方式：<br/>
+方式1优点：实现逻辑简单；缺点：侵入到业务代码逻辑中，需要对应修改维护业务流程<br/>
+方式2优点：对业务代码无侵入，业务代码可以随时修改自己逻辑而无需关注风险检查调用时机的业务逻辑；缺点：对应实现复杂度会高一些，特别是风险检测参数，需要自己从request及response中获取。</p>
 
-# 运行mysql无密码启动
-$ sudo mysqld_safe --skip-grant-tables &amp;
+<p>这里我们选择了第二种方案。这里就牵扯到下发cookie的取消。如果使用setcookie将cookie过期的话，在业务中设置的cookie在header中依然可以看到，先设置了cookie的值，然后对应把cookie值设置为空，并过期，存在安全性问题。</p>
 
-# 为了安全，可以这样启动，禁止远程连接
-$ sudo mysqld_safe --skip-grant-tables --skip-networking &amp;
+<p>使用RawCookie后，通过事后中间件，直到最后返回Response的时候，才真正的执行setcookie或setrawcookie，中间对于使用RawCookie::queue()方法添加的cookie，可以随时删除。</p>
 
-# 启动后登录mysql
-$ mysql
+<h3 id="toc_3">2.添加setrawcookie操作</h3>
 
-# 更改密码
-mysql&gt; update mysql.user set authentication_string=password(&#39;123qwe&#39;) where user=&#39;root&#39; and Host = &#39;localhost&#39;;
-mysql&gt; flush privileges;
-mysql&gt; quit;
+<p>Laravel 5.1及Laravel 5.2版本中，Cookie::queue方法，无法指定cookie的value值不做urlencode操作。</p>
 
-# 重启mysql服务
-$ sudo service mysql restart
-</code></pre>
+<p>Laravel 5.3以后，Laravel自带的Cookie已经支持该方法。因为我们线上Laravel版本都是5.1，所以这里自己封装RawCookie，使其支持类似RawCookie::queue()操作，并添加raw参数，根据raw参数判断，最终使用setcookie还是setrawcookie。</p>
+
+<h2 id="toc_4">使用</h2>
+
+<p>使用composer require wan/raw-cookie安装。</p>
+
+<p>当前只支持Laravel框架，主要是对Laravel框架中的Cookie及CookieJar进行包装。</p>
+
+<p>具体集成见项目README</p>
+
+<p>github地址：<a href="https://github.com/wanguowan/composer.RawCookie">https://github.com/wanguowan/composer.RawCookie</a></p>
 
 
-</div>
+		</div>
+	
 
-<br /><br />
-<hr />
-
-<div class="row clearfix">
-  <div class="large-6 columns">
-	<div class="text-left" style="padding:15px 0px;">
-		
-	        <a href="15004888347082.html"  title="Previous Post: Laravel第三方包报class not found">&laquo; Laravel第三方包报class not found</a>
-	    
-	</div>
-  </div>
-  <div class="large-6 columns">
-	<div class="text-right" style="padding:15px 0px;">
-		
-	        <a href="14847498744910.html" 
-	        title="Next Post: Laravel数据库读写分离配置">Laravel数据库读写分离配置 &raquo;</a>
-	    
-	</div>
-  </div>
-</div>
-
-<div class="row">
-<div style="padding:0px 0.93em;" class="share-comments">
-
-</div>
-</div>
-<script type="text/javascript">
-	$(function(){
-		var currentURL = '14975769061187.html';
-		$('#side-nav a').each(function(){
-			if($(this).attr('href') == currentURL){
-				$(this).parent().addClass('active');
-			}
-		});
-	});
-</script>  
+  
+  
 </div></div>
 
 
