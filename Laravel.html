@@ -55,6 +55,8 @@
         <li><label>Laravel</label></li>
 
           
+            <li><a title="Laravel 基础 - 门面" href="15010724959148.html">Laravel 基础 - 门面</a></li>
+          
             <li><a title="Laravel第三方包报class not found" href="15004888347082.html">Laravel第三方包报class not found</a></li>
           
             <li><a title="Laravel数据库读写分离配置" href="14847498744910.html">Laravel数据库读写分离配置</a></li>
@@ -112,6 +114,8 @@
                     
                       <li class="side-title"><span>Laravel</span></li>
                         
+                          <li><a title="Laravel 基础 - 门面" href="15010724959148.html">Laravel 基础 - 门面</a></li>
+                        
                           <li><a title="Laravel第三方包报class not found" href="15004888347082.html">Laravel第三方包报class not found</a></li>
                         
                           <li><a title="Laravel数据库读写分离配置" href="14847498744910.html">Laravel数据库读写分离配置</a></li>
@@ -152,290 +156,334 @@
 
 	
 		<div class="markdown-body">
-		<h1>Laravel第三方包报class not found</h1>
+		<h1>Laravel 基础 - 门面</h1>
 
-		<h2 id="toc_0">出现的问题</h2>
+		<p>今天查找问题时，突然看到关于 Laravel 中 Facade 一句描述：</p>
 
-<p>公司开发使用PHP，技术框架使用Laravel。最近线上出现一个问题，就是上线之后，每次都会出错。查看出错原因，是composer安装的第三方出现class not found。因为这个问题，在线下使用Lumen框架的时候，遇到过，查找问题原因是因为依赖的composer包中composer.json中的&quot;autoload&quot;:{&quot;psr-4&quot;:{}}书写格式问题。解决方法使用命令：composer dump-autoload -o;</p>
+<blockquote>
+<p>其实 Facade 类利用了 __callStatic() 这个魔术方法来延迟调用容器中的对象的方法，这里不过多讲解，你只需要知道Facade实现了将对它调用的静态方法映射到绑定类的动态方法上</p>
+</blockquote>
 
-<p>虽然知道问题的所在，但是有一个现象比较费解：这个第三方包已经使用很久了，为什么最近才开始报错呢？下面就开始查找出错原因</p>
+<p>瞬间对 Facde 实现原理感兴趣了，平时只是使用 Facade ，大概了解到的是 Facade 通过 Provider 中 register 方法注册到容器中，其中 register 方法中的 key 与 Facade 中方法返回的注册 key 相同即可使用，还没有研究过后面实现原理，更没有考虑如何通过静态方法可以调用实例的静态方法。</p>
 
-<h2 id="toc_1">解决方案</h2>
+<p>这里就通过分析代码了解一下 Facade 实现</p>
 
-<p>如果确认第三方包已安装，并且正确使用use引用了，尝试执行composer dump-autoload -o</p>
+<h2 id="toc_0">简介</h2>
 
-<h2 id="toc_2">最终结果</h2>
+<p>门面为应用的服务容器中的绑定类提供了一个&quot;静态&quot;接口。Laravel 内置了很多门面，你可能在不知道的情况下正在使用它们。Laravel 的门面作为服务容器中的底层类的&quot;静态代理&quot;，相比于传统静态方法，在维护时能够提供更加易于测试、更加灵活的、简明且富有表现力的语法。</p>
 
-<p>因为可能篇幅会比较长，所以这里先说明一下最终问题处理结果：原因还未准确定位到，现推测发布服务器环境问题，但因为发布服务器监控服务较多，不允许进行测试，所以具体环境哪个配置导致的问题，还没有定位到。</p>
+<p>Laravel 的所有门面都定义在 Illuminate\Support\Facades 命名空间下，所以我们可以轻松访问到门面：</p>
 
-<p>下面主要介绍问题解决过程：</p>
+<pre><code>use Illuminate\Support\Facades\Cache;
 
-<pre><code>    1. 查看laravel autoload
-    2. 查看composer源码；
-    3. 重新编译composer打印日志；
-    4. 分析composer install过程；
-    5. 查看php artisan optimize源码
+Route::get(&#39;/cache&#39;, function () {
+    return Cache::get(&#39;key&#39;);
+});
 </code></pre>
 
-<p>对分析查找问题的过程感兴趣的同学可以继续往下看。</p>
+<p>在整个Laravel文档中，很多例子使用了门面来演示框架的各种功能特性</p>
 
-<h2 id="toc_3">问题分析及解决过程</h2>
+<h2 id="toc_1">何时使用门面</h2>
 
-<h3 id="toc_4">1. 查找class not found原因</h3>
+<p>门面有诸多优点，其提供了简单、易记的语法，让我们无需记住长长的类名即可使用Laravel提供的功能特性，此外，由于他们对 PHP 动态方法的独特用法，使得它们很容易测试。</p>
 
-<h4 id="toc_5">分析</h4>
+<p>但是，使用门面也有需要注意的地方，一个最主要的危险就是类范围蠕变。由于门面如此好用并且不需要注入，在单个类中使用过多门面，会让类很容易变得越来越大。使用依赖注入则会让此类问题缓解，因为一个巨大的构造函数会让我们很容易判断出类在变大。因此，使用门面的时候要尤其注意类的大小，以便控制其有限职责。</p>
 
-<p>既然class not found，确认composer包已经安装。那问题就确定在autoload过程</p>
+<blockquote>
+<p>注：构建与 Laravel 交互的第三方扩展包时，最好注入 Laravel 契约而不是使用门面，因为扩展包在 Laravel 之外构建，你将不能访问 Laravel 的门面测试辅助函数。</p>
+</blockquote>
 
-<h4 id="toc_6">查看源码</h4>
+<h2 id="toc_2">工作原理</h2>
 
-<p>首先自动加载入口 public/index.php 中</p>
+<p>在 Laravel 应用中，门面就是一个为容器中对象提供访问方式的类。该机制原理由 Facade 类实现。Laravel 自带的门面，以及我们创建的自定义门面，都会继承自 Illuminate\Support\Facades\Facade 基类。</p>
 
-<pre><code>require __DIR__.&#39;/../bootstrap/autoload.php&#39;;
-</code></pre>
+<p>门面类只需要实现一个方法：getFacadeAccessor。正是 getFacadeAccessor 方法定义了从容器中解析什么，然后 Facade 基类使用魔术方法 __callStatic() 从你的门面中调用解析对象。</p>
 
-<p>然后继续进入 bootstrap/autoload.php 文件</p>
+<p>下面通过代码分析 Facade 中 Cookie 使用来分析 Facade 工作原理</p>
 
-<pre><code>require __DIR__.&#39;/../vendor/autoload.php&#39;;
-</code></pre>
+<pre><code>&lt;?php
 
-<p>然后继续进入 vendor/autoload.php</p>
+namespace App\Http\Controllers;
 
-<pre><code>//  require 自动加载类
-require_once __DIR__ . &#39;/composer/autoload_real.php&#39;;
+use Illuminate\Support\Facades\Cookie;
 
-//  真正返回文件列表的操作
-return ComposerAutoloaderInit3f39d071b2e74e04102a9c9b6f221123::getLoader();
-</code></pre>
-
-<p>进入getLoader()方法中</p>
-
-<pre><code>public static function getLoader()
+class CookieTestController extends Controller
 {
-    if (null !== self::$loader) {
-        return self::$loader;
-    }
-
-    //  注册自动加载方法，用来后面初始化ClassLoader类
-    spl_autoload_register(array(&#39;ComposerAutoloaderInit3f39d071b2e74e04102a9c9b6f221123&#39;, &#39;loadClassLoader&#39;), true, true);
-    //  初始化ClassLoarder
-    self::$loader = $loader = new \Composer\Autoload\ClassLoader();
-    spl_autoload_unregister(array(&#39;ComposerAutoloaderInit3f39d071b2e74e04102a9c9b6f221123&#39;, &#39;loadClassLoader&#39;));
-    
-    //  这里zend_loader_file_encoded查了一下，解释为：
-    //  Returns TRUE if the current file was encoded with Zend Guard or FALSE otherwise. If FALSE, consider disabling the Guard Loader
-    //  又查了一下Zend Guard，貌似是php代码加密并提高执行效率的，提高有限，比较鸡肋
-    //  打印了一下，发现不存在这个方法，即!function_exists(&#39;zend_loader_file_encoded&#39;)为true
-    $useStaticLoader = PHP_VERSION_ID &gt;= 50600 &amp;&amp; !defined(&#39;HHVM_VERSION&#39;) &amp;&amp; (!function_exists(&#39;zend_loader_file_encoded&#39;) || !zend_loader_file_encoded());
-    if ($useStaticLoader) {
-        //  程序在这里执行
-        //  引用ComposerStaticInit类
-        require_once __DIR__ . &#39;/autoload_static.php&#39;;
-
-        //  调用ComposerStaticInit类中的getInitializer方法
-        //  主要作用是使用ComposerStaticInit类中的值初始化上面创建的ComposerAutoloader对象中的prefixLengthsPsr4、prefixDirsPsr4、prefixesPsr0、classMap等值
-        call_user_func(\Composer\Autoload\ComposerStaticInit3f39d071b2e74e04102a9c9b6f221123::getInitializer($loader));
-    } else {
-        $map = require __DIR__ . &#39;/autoload_namespaces.php&#39;;
-        foreach ($map as $namespace =&gt; $path) {
-            $loader-&gt;set($namespace, $path);
-        }
-
-        $map = require __DIR__ . &#39;/autoload_psr4.php&#39;;
-        foreach ($map as $namespace =&gt; $path) {
-            $loader-&gt;setPsr4($namespace, $path);
-        }
-
-        $classMap = require __DIR__ . &#39;/autoload_classmap.php&#39;;
-        if ($classMap) {
-            $loader-&gt;addClassMap($classMap);
-        }
-    }
-    
-    //  重点在这个方法
-    $loader-&gt;register(true);
-
-    if ($useStaticLoader) {
-        $includeFiles = Composer\Autoload\ComposerStaticInit3f39d071b2e74e04102a9c9b6f221123::$files;
-    } else {
-        $includeFiles = require __DIR__ . &#39;/autoload_files.php&#39;;
-    }
-    foreach ($includeFiles as $fileIdentifier =&gt; $file) {
-        composerRequire3f39d071b2e74e04102a9c9b6f221123($fileIdentifier, $file);
-    }
-
-    return $loader;
-}
-</code></pre>
-
-<p>ClassLoader的register方法</p>
-
-<pre><code>public function register($prepend = false)
-{
-    //  调用ClassLoader类的loadClass方法
-    spl_autoload_register(array($this, &#39;loadClass&#39;), true, $prepend);
-}
-</code></pre>
-
-<p>ClassLoader类的loadClass方法</p>
-
-<pre><code>public function loadClass($class)
-{
-    //  查找文件，如果查找到文件，则加载文件
-    if ($file = $this-&gt;findFile($class)) {
-        includeFile($file);
-
-        return true;
+    public function setCookie( Request $request )
+    {
+        Cookie::queue( &#39;wan&#39;, &#39;test&#39;, 60, &#39;/&#39;, &#39;.onlywan.cc&#39;, false, true );
     }
 }
 </code></pre>
 
-<p>ClassLoader类的findFile方法</p>
+<p>注意我们在顶部引用了 Cookie 门面。</p>
 
-<pre><code>public function findFile($class)
+<p>下面我们查看 Illuminate\Support\Facades\Cookie 类的源码，会发现其中并没有静态方法 queue</p>
+
+<pre><code>&lt;?php
+
+namespace Illuminate\Support\Facades;
+
+/**
+ * @see \Illuminate\Cookie\CookieJar
+ */
+class Cookie extends Facade
 {
-    // class map lookup
-    //  class map加载方式，我的理解：是通过将类与对应路径生成一个对应表
-    //  该方式优点：加载速度快，相当于查询字典；
-    //  缺点：无法实现自动加载，添加新类后，需要对应维护class map
-    if (isset($this-&gt;classMap[$class])) {
-        return $this-&gt;classMap[$class];
-    }
-    
-    //  $classMapAuthoritative默认值为false，流程到目前，没有设置过该值
-    //  $missingClasses通过查看该方法最后几行，发现作用是记录自动加载过程中不存在的文件
-    //  所以这里第一次加载会返回false
-    if ($this-&gt;classMapAuthoritative || isset($this-&gt;missingClasses[$class])) {
-        return false;
-    }
-    
-    //  APCu 是老牌 PHP 字节码和对象缓存,缓存器 APC 的分支（PS:我也是查的，不懂呀～大家感兴趣可以自己深研究）
-    //  经测试，$this-&gt;apcuPrefix=null
-    if (null !== $this-&gt;apcuPrefix) {
-        $file = apcu_fetch($this-&gt;apcuPrefix.$class, $hit);
-        if ($hit) {
-            return $file;
-        }
+    /**
+     * Determine if a cookie exists on the request.
+     *
+     * @param  string  $key
+     * @return bool
+     */
+    public static function has($key)
+    {
+        return ! is_null(static::$app[&#39;request&#39;]-&gt;cookie($key, null));
     }
 
-    //  最后一层方法（保证是最后一个方法）
-    $file = $this-&gt;findFileWithExtension($class, &#39;.php&#39;);
-
-    // Search for Hack files if we are running on HHVM
-    if (false === $file &amp;&amp; defined(&#39;HHVM_VERSION&#39;)) {
-        $file = $this-&gt;findFileWithExtension($class, &#39;.hh&#39;);
+    /**
+     * Retrieve a cookie from the request.
+     *
+     * @param  string  $key
+     * @param  mixed   $default
+     * @return string
+     */
+    public static function get($key = null, $default = null)
+    {
+        return static::$app[&#39;request&#39;]-&gt;cookie($key, $default);
     }
 
-    if (null !== $this-&gt;apcuPrefix) {
-        apcu_add($this-&gt;apcuPrefix.$class, $file);
+    /**
+     * Get the registered name of the component.
+     *
+     * @return string
+     */
+    protected static function getFacadeAccessor()
+    {
+        return &#39;cookie&#39;;
     }
-
-    //  记录无法找到的类，方便再次加载直接返回
-    if (false === $file) {
-        // Remember that this class does not exist.
-        $this-&gt;missingClasses[$class] = true;
-    }
-
-    return $file;
 }
 </code></pre>
 
-<p>ClassLoader类中findFileWithExtension方法</p>
+<p>Cookie 门面继承了 Facade 基类并定义了 getFacadeAccessor 方法，该方法的工作就是返回服务容器绑定类的别名，当用户引用 Cookie 类的任何静态方法时，Laravel 从服务容器中解析 cookie 绑定，然后在解析出的对象上调用所有请求方法。</p>
 
-<pre><code>private function findFileWithExtension($class, $ext)
+<p>如何绑定cookie的呢，则是通过 config/app.php 中 providers 的 Illuminate\Cookie\CookieServiceProvider::class 绑定的</p>
+
+<pre><code>&lt;?php
+
+namespace Illuminate\Cookie;
+
+use Illuminate\Support\ServiceProvider;
+
+class CookieServiceProvider extends ServiceProvider
 {
-    //  终于看到加载psr-4了
-    // PSR-4 lookup
-    //  对路径中的\转换为文件系统中对应路径分隔符并+后缀，
-    //  比如wan\test类，最后处理为wan/test.php(linux下)
-    $logicalPathPsr4 = strtr($class, &#39;\\&#39;, DIRECTORY_SEPARATOR) . $ext;
+    /**
+     * Register the service provider.
+     *
+     * @return void
+     */
+    public function register()
+    {
+        $this-&gt;app-&gt;singleton(&#39;cookie&#39;, function ($app) {
+            $config = $app[&#39;config&#39;][&#39;session&#39;];
 
-    //  获得类名中第一个字母，主要用于在ClassLoader中prefixLengthsPsr4快速检索包，并找到对应包前缀长度，后面截取时使用
-    //  对比autoload_static.php中的$prefixLengthsPsr4即可明白作用
-    $first = $class[0];
-    if (isset($this-&gt;prefixLengthsPsr4[$first])) {
-        $subPath = $class;
-        while (false !== $lastPos = strrpos($subPath, &#39;\\&#39;)) {
-            //  从右往左一层层循环类名中的路径
-            $subPath = substr($subPath, 0, $lastPos);
-            $search = $subPath.&#39;\\&#39;;
-            //  找到对应composer包前缀后，取出对应路径，将包前缀截取后，替换成对应的目录路径，即为class所对应文件
-            if (isset($this-&gt;prefixDirsPsr4[$search])) {
-                foreach ($this-&gt;prefixDirsPsr4[$search] as $dir) {
-                    $length = $this-&gt;prefixLengthsPsr4[$first][$search];
-                    if (file_exists($file = $dir . DIRECTORY_SEPARATOR . substr($logicalPathPsr4, $length))) {
-                        return $file;
-                    }
-                }
-            }
-        }
+            return (new CookieJar)-&gt;setDefaultPathAndDomain($config[&#39;path&#39;], $config[&#39;domain&#39;], $config[&#39;secure&#39;]);
+        });
     }
-    
-    //  到这里psr-4文件就加载完了，后面是psr-0等其他文件加载，这里就不分析了。
-    //  这里分析一下为什么是第三方包psr-4格式错误
-    //  比如包名为wan/lib，即composer安装命令对应composer require wan/lib
-    //  第三方包中autoload psr-4配置为 &quot;psr-4&quot; : { &quot;wan\\&quot; : &quot;src&quot; } 
-    //  （**警告：上面是错误配置，为了举例说明；正确应该是&quot;psr-4&quot; : { &quot;wan\\lib\\&quot; : &quot;src&quot; })
-    //  最终生成的$prefixLengthsPsr4为{&#39;w&#39; =&gt;array (&#39;wan\\&#39; =&gt; 5,),}
-    //  生成$prefixDirsPsr4为&#39;wan\\&#39; =&gt; array (0 =&gt; __DIR__ . &#39;/..&#39; . &#39;/wan/lib/src&#39;,),
-    //  对应上面代码，在最后$file = $dir . DIRECTORY_SEPARATOR . substr($logicalPathPsr4, $length)
-    //  $file拼接出来的路径是vendor/wan/lib/src/lib/$className.php，导致最后无法拼接出正确路径
-
-    // PSR-4 fallback dirs
-    foreach ($this-&gt;fallbackDirsPsr4 as $dir) {
-        if (file_exists($file = $dir . DIRECTORY_SEPARATOR . $logicalPathPsr4)) {
-            return $file;
-        }
-    }
-
-    // PSR-0 lookup
-    if (false !== $pos = strrpos($class, &#39;\\&#39;)) {
-        // namespaced class name
-        $logicalPathPsr0 = substr($logicalPathPsr4, 0, $pos + 1)
-                . strtr(substr($logicalPathPsr4, $pos + 1), &#39;_&#39;, DIRECTORY_SEPARATOR);
-    } else {
-        // PEAR-like class name
-        $logicalPathPsr0 = strtr($class, &#39;_&#39;, DIRECTORY_SEPARATOR) . $ext;
-    }
-
-    if (isset($this-&gt;prefixesPsr0[$first])) {
-        foreach ($this-&gt;prefixesPsr0[$first] as $prefix =&gt; $dirs) {
-            if (0 === strpos($class, $prefix)) {
-                foreach ($dirs as $dir) {
-                    if (file_exists($file = $dir . DIRECTORY_SEPARATOR . $logicalPathPsr0)) {
-                        return $file;
-                    }
-                }
-            }
-        }
-    }
-
-    // PSR-0 fallback dirs
-    foreach ($this-&gt;fallbackDirsPsr0 as $dir) {
-        if (file_exists($file = $dir . DIRECTORY_SEPARATOR . $logicalPathPsr0)) {
-            return $file;
-        }
-    }
-
-    // PSR-0 include paths.
-    if ($this-&gt;useIncludePath &amp;&amp; $file = stream_resolve_include_path($logicalPathPsr0)) {
-        return $file;
-    }
-
-    return false;
 }
 </code></pre>
 
-<h2 id="toc_7">总结</h2>
+<p>可以看出来 Facade 中 Cookie 对应绑定的实现类为 Illuminate\Cookie\CookieJar。具体 CookieJar的实现，大家可以自己看源码，下面继续分析如何将静态方法映射到绑定类的动态方法上。</p>
 
-<p>因为查找过程比较长，导致篇幅也比较长。所以决定拆分成多篇文章说明。</p>
+<p>如上面所说，主要是 Facade 的 __callStatic() 魔术方法实现的</p>
 
-<p>到这里，通过查找问题，把Laravel框架autoload机制源码分析了一遍，也学会了composer包中对应autoload信息中psr-4及classmap信息如何配置。</p>
+<blockquote>
+<p>__callStatic() 魔术方法作用：当调用当前环境下未定义或不可见的类属性或方法时，该方法会被调用。</p>
+</blockquote>
 
-<p>后续文章中会通过查看分析composer源码及php artisan命令源码，分析为什么本地开发环境及测试环境没有出现class not found情况</p>
+<p>下面是Facade 的 __callStatic() 魔术方法实现</p>
+
+<pre><code>/**
+* Handle dynamic, static calls to the object.
+*
+* @param  string  $method
+* @param  array   $args
+* @return mixed
+*
+* @throws \RuntimeException
+*/
+public static function __callStatic($method, $args)
+{
+   $instance = static::getFacadeRoot();
+
+   if (! $instance) {
+       throw new RuntimeException(&#39;A facade root has not been set.&#39;);
+   }
+
+   switch (count($args)) {
+       case 0:
+           return $instance-&gt;$method();
+       case 1:
+           return $instance-&gt;$method($args[0]);
+       case 2:
+           return $instance-&gt;$method($args[0], $args[1]);
+       case 3:
+           return $instance-&gt;$method($args[0], $args[1], $args[2]);
+       case 4:
+           return $instance-&gt;$method($args[0], $args[1], $args[2], $args[3]);
+       default:
+           return call_user_func_array([$instance, $method], $args);
+   }
+}
+</code></pre>
+
+<p>首先获得注册的实例，然后调用实例的 method 方法。</p>
+
+<p>下面是获得实例对象 getFacadeRoot 实现</p>
+
+<pre><code>/**
+* Get the root object behind the facade.
+*
+* @return mixed
+*/
+public static function getFacadeRoot()
+{
+   return static::resolveFacadeInstance(static::getFacadeAccessor());
+}
+</code></pre>
+
+<p>其中 getFacadeAccesssor() 即 Cookie 门面中实现的方法，返回绑定名 &quot;cookie&quot;。</p>
+
+<p>resolveFacadeInstance 方法</p>
+
+<pre><code>/**
+* Resolve the facade root instance from the container.
+*
+* @param  string|object  $name
+* @return mixed
+*/
+protected static function resolveFacadeInstance($name)
+{
+   if (is_object($name)) {
+       return $name;
+   }
+
+   if (isset(static::$resolvedInstance[$name])) {
+       return static::$resolvedInstance[$name];
+   }
+
+   return static::$resolvedInstance[$name] = static::$app[$name];
+}
+</code></pre>
+
+<p>分析代码，如果这个Instance已经在列表中，则直接使用；否则从 $app 获取。如果第一次使用，肯定会从 $app 中获取</p>
+
+<p>查看 $app 权限，权限protected，所以应该是通过 set 方法初始化的。</p>
+
+<pre><code>protected static $app;
+
+/**
+* Set the application instance.
+*
+* @param  \Illuminate\Contracts\Foundation\Application  $app
+* @return void
+*/
+public static function setFacadeApplication($app)
+{
+   static::$app = $app;
+}
+</code></pre>
+
+<p>剩下就是找 $app 如何初始化的；通过查找发现是 Laravel 框架在初始化 Http Kernel 时初始化的，代码如下</p>
+
+<p>bootstrap/app.php文件中</p>
+
+<pre><code>$app-&gt;singleton(
+    Illuminate\Contracts\Http\Kernel::class,
+    App\Http\Kernel::class
+);
+</code></pre>
+
+<p>App\Http\Kernel</p>
+
+<pre><code>&lt;?php
+
+namespace App\Console;
+
+use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
+
+class Kernel extends ConsoleKernel
+{
+    /**
+     * The Artisan commands provided by your application.
+     *
+     * @var array
+     */
+    protected $commands = [
+        // Commands\Inspire::class,
+    ];
+
+    /**
+     * Define the application&#39;s command schedule.
+     *
+     * @param  \Illuminate\Console\Scheduling\Schedule  $schedule
+     * @return void
+     */
+    protected function schedule(Schedule $schedule)
+    {
+        // $schedule-&gt;command(&#39;inspire&#39;)
+        //          -&gt;hourly();
+    }
+}
+</code></pre>
+
+<p>ConsoleKernel基类中 $bootstrappers 数组中</p>
+
+<pre><code>protected $bootstrappers = [
+   // ...
+   &#39;Illuminate\Foundation\Bootstrap\RegisterFacades&#39;,
+   // ...
+];
+</code></pre>
+
+<p>Illuminate\Foundation\Bootstrap\RegisterFacades</p>
+
+<pre><code>&lt;?php
+
+namespace Illuminate\Foundation\Bootstrap;
+
+use Illuminate\Support\Facades\Facade;
+use Illuminate\Foundation\AliasLoader;
+use Illuminate\Contracts\Foundation\Application;
+
+class RegisterFacades
+{
+    /**
+     * Bootstrap the given application.
+     *
+     * @param  \Illuminate\Contracts\Foundation\Application  $app
+     * @return void
+     */
+    public function bootstrap(Application $app)
+    {
+        // ...
+        Facade::setFacadeApplication($app);
+        // ...
+    }
+}
+</code></pre>
+
+<p>这里看到了设置 $app ，这里的 $app 即为 Laravel 框架的核心：容器类Illuminate\Contracts\Foundation\Application</p>
+
+<h2 id="toc_3">总结</h2>
+
+<p>到这里 Laravel 的 Facade 也算是分析完了，通过了解原理，方便后面自己设计实现时参考使用，而具体使用起来相对于依赖注入及辅助函数等的优缺点还得在后面项目中通过使用进行总结。</p>
 
 
 		</div>
+	
+
+ 
 	
 
  

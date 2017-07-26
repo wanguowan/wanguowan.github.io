@@ -55,6 +55,8 @@
         <li><label>Laravel</label></li>
 
           
+            <li><a title="Laravel 基础 - 门面" href="15010724959148.html">Laravel 基础 - 门面</a></li>
+          
             <li><a title="Laravel第三方包报class not found" href="15004888347082.html">Laravel第三方包报class not found</a></li>
           
             <li><a title="Laravel数据库读写分离配置" href="14847498744910.html">Laravel数据库读写分离配置</a></li>
@@ -112,6 +114,8 @@
                     
                       <li class="side-title"><span>Laravel</span></li>
                         
+                          <li><a title="Laravel 基础 - 门面" href="15010724959148.html">Laravel 基础 - 门面</a></li>
+                        
                           <li><a title="Laravel第三方包报class not found" href="15004888347082.html">Laravel第三方包报class not found</a></li>
                         
                           <li><a title="Laravel数据库读写分离配置" href="14847498744910.html">Laravel数据库读写分离配置</a></li>
@@ -152,54 +156,332 @@
 
 	
 		<div class="markdown-body">
-		<h1>Laravel RawCookie</h1>
+		<h1>Laravel 基础 - 门面</h1>
 
-		<h2 id="toc_0">介绍</h2>
+		<p>今天查找问题时，突然看到关于 Laravel 中 Facade 一句描述：</p>
 
-<p>这里介绍一下自己封装的composer包，wan/raw-cookie。</p>
+<blockquote>
+<p>其实 Facade 类利用了 __callStatic() 这个魔术方法来延迟调用容器中的对象的方法，这里不过多讲解，你只需要知道Facade实现了将对它调用的静态方法映射到绑定类的动态方法上</p>
+</blockquote>
 
-<p>主要作用是在laravel框架中使用setrawcookie设置cookie值。</p>
+<p>瞬间对 Facde 实现原理感兴趣了，平时只是使用 Facade ，大概了解到的是 Facade 通过 Provider 中 register 方法注册到容器中，其中 register 方法中的 key 与 Facade 中方法返回的注册 key 相同即可使用，还没有研究过后面实现原理，更没有考虑如何通过静态方法可以调用实例的静态方法。</p>
 
-<h2 id="toc_1">优势</h2>
+<p>这里就通过分析代码了解一下 Facade 实现</p>
 
-<p>大家可能比较困惑，php不是有原生的setrawcookie吗，Laravel中也有Cookie操作类。这里说明一下写这个包的原因：</p>
+<h2 id="toc_0">简介</h2>
 
-<h3 id="toc_2">1.更加优雅</h3>
+<p>门面为应用的服务容器中的绑定类提供了一个&quot;静态&quot;接口。Laravel 内置了很多门面，你可能在不知道的情况下正在使用它们。Laravel 的门面作为服务容器中的底层类的&quot;静态代理&quot;，相比于传统静态方法，在维护时能够提供更加易于测试、更加灵活的、简明且富有表现力的语法。</p>
 
-<p>优雅的原因是什么呢，因原生setcookie及setrawcookie设置后无法取消，对一些业务处理无法进行灵活的支持，这里举一个例子说明一下</p>
+<p>Laravel 的所有门面都定义在 Illuminate\Support\Facades 命名空间下，所以我们可以轻松访问到门面：</p>
 
-<p>比如登录操作，登录成功后，需要下发对应的cookie。这时，登录接口添加了一个登录风险检查功能，就是判断用户登录是否存在风险。如果存在风险，则相应的对用户进行更严格的验证。</p>
+<pre><code>use Illuminate\Support\Facades\Cache;
 
-<p>方式两种：<br/>
-1. 登录成功后，在代码中添加风险检测，如果检测通过，下发cookie；不通过，不下发cookie，返回错误。<br/>
-2. 做一个事后中间件，如果检测到是登录，进行登录风险检测，如果检测通过，继续返回；不通过，取消cookie下发，取消原响应值</p>
+Route::get(&#39;/cache&#39;, function () {
+    return Cache::get(&#39;key&#39;);
+});
+</code></pre>
 
-<p>分析两种方式：<br/>
-方式1优点：实现逻辑简单；缺点：侵入到业务代码逻辑中，需要对应修改维护业务流程<br/>
-方式2优点：对业务代码无侵入，业务代码可以随时修改自己逻辑而无需关注风险检查调用时机的业务逻辑；缺点：对应实现复杂度会高一些，特别是风险检测参数，需要自己从request及response中获取。</p>
+<p>在整个Laravel文档中，很多例子使用了门面来演示框架的各种功能特性</p>
 
-<p>这里我们选择了第二种方案。这里就牵扯到下发cookie的取消。如果使用setcookie将cookie过期的话，在业务中设置的cookie在header中依然可以看到，先设置了cookie的值，然后对应把cookie值设置为空，并过期，存在安全性问题。</p>
+<h2 id="toc_1">何时使用门面</h2>
 
-<p>使用RawCookie后，通过事后中间件，直到最后返回Response的时候，才真正的执行setcookie或setrawcookie，中间对于使用RawCookie::queue()方法添加的cookie，可以随时删除。</p>
+<p>门面有诸多优点，其提供了简单、易记的语法，让我们无需记住长长的类名即可使用Laravel提供的功能特性，此外，由于他们对 PHP 动态方法的独特用法，使得它们很容易测试。</p>
 
-<h3 id="toc_3">2.添加setrawcookie操作</h3>
+<p>但是，使用门面也有需要注意的地方，一个最主要的危险就是类范围蠕变。由于门面如此好用并且不需要注入，在单个类中使用过多门面，会让类很容易变得越来越大。使用依赖注入则会让此类问题缓解，因为一个巨大的构造函数会让我们很容易判断出类在变大。因此，使用门面的时候要尤其注意类的大小，以便控制其有限职责。</p>
 
-<p>Laravel 5.1及Laravel 5.2版本中，Cookie::queue方法，无法指定cookie的value值不做urlencode操作。</p>
+<blockquote>
+<p>注：构建与 Laravel 交互的第三方扩展包时，最好注入 Laravel 契约而不是使用门面，因为扩展包在 Laravel 之外构建，你将不能访问 Laravel 的门面测试辅助函数。</p>
+</blockquote>
 
-<p>Laravel 5.3以后，Laravel自带的Cookie已经支持该方法。因为我们线上Laravel版本都是5.1，所以这里自己封装RawCookie，使其支持类似RawCookie::queue()操作，并添加raw参数，根据raw参数判断，最终使用setcookie还是setrawcookie。</p>
+<h2 id="toc_2">工作原理</h2>
 
-<h2 id="toc_4">使用</h2>
+<p>在 Laravel 应用中，门面就是一个为容器中对象提供访问方式的类。该机制原理由 Facade 类实现。Laravel 自带的门面，以及我们创建的自定义门面，都会继承自 Illuminate\Support\Facades\Facade 基类。</p>
 
-<p>使用composer require wan/raw-cookie安装。</p>
+<p>门面类只需要实现一个方法：getFacadeAccessor。正是 getFacadeAccessor 方法定义了从容器中解析什么，然后 Facade 基类使用魔术方法 __callStatic() 从你的门面中调用解析对象。</p>
 
-<p>当前只支持Laravel框架，主要是对Laravel框架中的Cookie及CookieJar进行包装。</p>
+<p>下面通过代码分析 Facade 中 Cookie 使用来分析 Facade 工作原理</p>
 
-<p>具体集成见项目README</p>
+<pre><code>&lt;?php
 
-<p>github地址：<a href="https://github.com/wanguowan/composer.RawCookie">https://github.com/wanguowan/composer.RawCookie</a></p>
+namespace App\Http\Controllers;
+
+use Illuminate\Support\Facades\Cookie;
+
+class CookieTestController extends Controller
+{
+    public function setCookie( Request $request )
+    {
+        Cookie::queue( &#39;wan&#39;, &#39;test&#39;, 60, &#39;/&#39;, &#39;.onlywan.cc&#39;, false, true );
+    }
+}
+</code></pre>
+
+<p>注意我们在顶部引用了 Cookie 门面。</p>
+
+<p>下面我们查看 Illuminate\Support\Facades\Cookie 类的源码，会发现其中并没有静态方法 queue</p>
+
+<pre><code>&lt;?php
+
+namespace Illuminate\Support\Facades;
+
+/**
+ * @see \Illuminate\Cookie\CookieJar
+ */
+class Cookie extends Facade
+{
+    /**
+     * Determine if a cookie exists on the request.
+     *
+     * @param  string  $key
+     * @return bool
+     */
+    public static function has($key)
+    {
+        return ! is_null(static::$app[&#39;request&#39;]-&gt;cookie($key, null));
+    }
+
+    /**
+     * Retrieve a cookie from the request.
+     *
+     * @param  string  $key
+     * @param  mixed   $default
+     * @return string
+     */
+    public static function get($key = null, $default = null)
+    {
+        return static::$app[&#39;request&#39;]-&gt;cookie($key, $default);
+    }
+
+    /**
+     * Get the registered name of the component.
+     *
+     * @return string
+     */
+    protected static function getFacadeAccessor()
+    {
+        return &#39;cookie&#39;;
+    }
+}
+</code></pre>
+
+<p>Cookie 门面继承了 Facade 基类并定义了 getFacadeAccessor 方法，该方法的工作就是返回服务容器绑定类的别名，当用户引用 Cookie 类的任何静态方法时，Laravel 从服务容器中解析 cookie 绑定，然后在解析出的对象上调用所有请求方法。</p>
+
+<p>如果绑定cache的呢，则是通过 config/app.php 中 providers 的 Illuminate\Cookie\CookieServiceProvider::class 绑定的</p>
+
+<pre><code>&lt;?php
+
+namespace Illuminate\Cookie;
+
+use Illuminate\Support\ServiceProvider;
+
+class CookieServiceProvider extends ServiceProvider
+{
+    /**
+     * Register the service provider.
+     *
+     * @return void
+     */
+    public function register()
+    {
+        $this-&gt;app-&gt;singleton(&#39;cookie&#39;, function ($app) {
+            $config = $app[&#39;config&#39;][&#39;session&#39;];
+
+            return (new CookieJar)-&gt;setDefaultPathAndDomain($config[&#39;path&#39;], $config[&#39;domain&#39;], $config[&#39;secure&#39;]);
+        });
+    }
+}
+</code></pre>
+
+<p>可以看出来 Facade 中 Cookie 对应绑定的实现类为 Illuminate\Cookie\CookieJar。具体 CookieJar的实现，大家可以自己看源码，下面继续分析如何将静态方法映射到绑定类的动态方法上。</p>
+
+<p>如上面所说，主要是 Facade 的 __callStatic() 魔术方法实现的</p>
+
+<blockquote>
+<p>__callStatic() 魔术方法作用：当调用当前环境下未定义或不可见的类属性或方法时，该方法会被调用。</p>
+</blockquote>
+
+<p>下面是Facade 的 __callStatic() 魔术方法实现</p>
+
+<pre><code>/**
+* Handle dynamic, static calls to the object.
+*
+* @param  string  $method
+* @param  array   $args
+* @return mixed
+*
+* @throws \RuntimeException
+*/
+public static function __callStatic($method, $args)
+{
+   $instance = static::getFacadeRoot();
+
+   if (! $instance) {
+       throw new RuntimeException(&#39;A facade root has not been set.&#39;);
+   }
+
+   switch (count($args)) {
+       case 0:
+           return $instance-&gt;$method();
+       case 1:
+           return $instance-&gt;$method($args[0]);
+       case 2:
+           return $instance-&gt;$method($args[0], $args[1]);
+       case 3:
+           return $instance-&gt;$method($args[0], $args[1], $args[2]);
+       case 4:
+           return $instance-&gt;$method($args[0], $args[1], $args[2], $args[3]);
+       default:
+           return call_user_func_array([$instance, $method], $args);
+   }
+}
+</code></pre>
+
+<p>getFacadeRoot实现</p>
+
+<pre><code>/**
+* Get the root object behind the facade.
+*
+* @return mixed
+*/
+public static function getFacadeRoot()
+{
+   return static::resolveFacadeInstance(static::getFacadeAccessor());
+}
+</code></pre>
+
+<p>其中 getFacadeAccesssor() 即 Cookie 门面中实现的方法，返回绑定名 &quot;cookie&quot;。</p>
+
+<p>resolveFacadeInstance 方法</p>
+
+<pre><code>/**
+* Resolve the facade root instance from the container.
+*
+* @param  string|object  $name
+* @return mixed
+*/
+protected static function resolveFacadeInstance($name)
+{
+   if (is_object($name)) {
+       return $name;
+   }
+
+   if (isset(static::$resolvedInstance[$name])) {
+       return static::$resolvedInstance[$name];
+   }
+
+   return static::$resolvedInstance[$name] = static::$app[$name];
+}
+</code></pre>
+
+<p>分析代码，如果这个Instance已经在列表中，则直接使用；否则从 \(app 获取。如果第一次使用，肯定会从 \)app 中获取</p>
+
+<p>查看 $app 权限，权限protected，所以应该是通过 set 方法初始化的。</p>
+
+<pre><code>protected static $app;
+
+/**
+* Set the application instance.
+*
+* @param  \Illuminate\Contracts\Foundation\Application  $app
+* @return void
+*/
+public static function setFacadeApplication($app)
+{
+   static::$app = $app;
+}
+</code></pre>
+
+<p>剩下就是找 $app 如何初始化的；通过查找发现是 Laravel 框架在初始化 Http Kernel 时初始化的，代码如下</p>
+
+<p>bootstrap/app.php文件中</p>
+
+<pre><code>$app-&gt;singleton(
+    Illuminate\Contracts\Http\Kernel::class,
+    App\Http\Kernel::class
+);
+</code></pre>
+
+<p>App\Http\Kernel</p>
+
+<pre><code>&lt;?php
+
+namespace App\Console;
+
+use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
+
+class Kernel extends ConsoleKernel
+{
+    /**
+     * The Artisan commands provided by your application.
+     *
+     * @var array
+     */
+    protected $commands = [
+        // Commands\Inspire::class,
+    ];
+
+    /**
+     * Define the application&#39;s command schedule.
+     *
+     * @param  \Illuminate\Console\Scheduling\Schedule  $schedule
+     * @return void
+     */
+    protected function schedule(Schedule $schedule)
+    {
+        // $schedule-&gt;command(&#39;inspire&#39;)
+        //          -&gt;hourly();
+    }
+}
+</code></pre>
+
+<p>ConsoleKernel基类中 $bootstrappers 数组中</p>
+
+<pre><code>protected $bootstrappers = [
+   // ...
+   &#39;Illuminate\Foundation\Bootstrap\RegisterFacades&#39;,
+   // ...
+];
+</code></pre>
+
+<p>Illuminate\Foundation\Bootstrap\RegisterFacades<br/>
+```<br/>
+&lt;?php</p>
+
+<p>namespace Illuminate\Foundation\Bootstrap;</p>
+
+<p>use Illuminate\Support\Facades\Facade;<br/>
+use Illuminate\Foundation\AliasLoader;<br/>
+use Illuminate\Contracts\Foundation\Application;</p>
+
+<p>class RegisterFacades<br/>
+{<br/>
+    /**<br/>
+     * Bootstrap the given application.<br/>
+     *<br/>
+     * @param  \Illuminate\Contracts\Foundation\Application  \(app<br/>
+     * @return void<br/>
+     */<br/>
+    public function bootstrap(Application \)app)<br/>
+    {<br/>
+        // ...<br/>
+        Facade::setFacadeApplication($app);<br/>
+        // ...<br/>
+    }<br/>
+}<br/>
+```</p>
+
+<p>这里看到了设置 \(app ，这里的 \)app 即为 Laravel 框架的核心：容器类Illuminate\Contracts\Foundation\Application</p>
+
+<h2 id="toc_3">总结</h2>
+
+<p>到这里 Laravel 的 Facade 也算是分析完了，通过了解原理，方便后面自己设计实现时参考使用，而具体使用起来相对于依赖注入及辅助函数等的优缺点还得在后面项目中通过使用进行总结。</p>
 
 
 		</div>
+	
+
+ 
 	
 
  
