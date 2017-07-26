@@ -262,7 +262,7 @@ class Cookie extends Facade
 
 <p>Cookie 门面继承了 Facade 基类并定义了 getFacadeAccessor 方法，该方法的工作就是返回服务容器绑定类的别名，当用户引用 Cookie 类的任何静态方法时，Laravel 从服务容器中解析 cookie 绑定，然后在解析出的对象上调用所有请求方法。</p>
 
-<p>如果绑定cache的呢，则是通过 config/app.php 中 providers 的 Illuminate\Cookie\CookieServiceProvider::class 绑定的</p>
+<p>如何绑定cookie的呢，则是通过 config/app.php 中 providers 的 Illuminate\Cookie\CookieServiceProvider::class 绑定的</p>
 
 <pre><code>&lt;?php
 
@@ -332,7 +332,9 @@ public static function __callStatic($method, $args)
 }
 </code></pre>
 
-<p>getFacadeRoot实现</p>
+<p>首先获得注册的实例，然后调用实例的 method 方法。</p>
+
+<p>下面是获得实例对象 getFacadeRoot 实现</p>
 
 <pre><code>/**
 * Get the root object behind the facade.
@@ -369,7 +371,7 @@ protected static function resolveFacadeInstance($name)
 }
 </code></pre>
 
-<p>分析代码，如果这个Instance已经在列表中，则直接使用；否则从 \(app 获取。如果第一次使用，肯定会从 \)app 中获取</p>
+<p>分析代码，如果这个Instance已经在列表中，则直接使用；否则从 $app 获取。如果第一次使用，肯定会从 $app 中获取</p>
 
 <p>查看 $app 权限，权限protected，所以应该是通过 set 方法初始化的。</p>
 
@@ -440,34 +442,34 @@ class Kernel extends ConsoleKernel
 ];
 </code></pre>
 
-<p>Illuminate\Foundation\Bootstrap\RegisterFacades<br/>
-```<br/>
-&lt;?php</p>
+<p>Illuminate\Foundation\Bootstrap\RegisterFacades</p>
 
-<p>namespace Illuminate\Foundation\Bootstrap;</p>
+<pre><code>&lt;?php
 
-<p>use Illuminate\Support\Facades\Facade;<br/>
-use Illuminate\Foundation\AliasLoader;<br/>
-use Illuminate\Contracts\Foundation\Application;</p>
+namespace Illuminate\Foundation\Bootstrap;
 
-<p>class RegisterFacades<br/>
-{<br/>
-    /**<br/>
-     * Bootstrap the given application.<br/>
-     *<br/>
-     * @param  \Illuminate\Contracts\Foundation\Application  \(app<br/>
-     * @return void<br/>
-     */<br/>
-    public function bootstrap(Application \)app)<br/>
-    {<br/>
-        // ...<br/>
-        Facade::setFacadeApplication($app);<br/>
-        // ...<br/>
-    }<br/>
-}<br/>
-```</p>
+use Illuminate\Support\Facades\Facade;
+use Illuminate\Foundation\AliasLoader;
+use Illuminate\Contracts\Foundation\Application;
 
-<p>这里看到了设置 \(app ，这里的 \)app 即为 Laravel 框架的核心：容器类Illuminate\Contracts\Foundation\Application</p>
+class RegisterFacades
+{
+    /**
+     * Bootstrap the given application.
+     *
+     * @param  \Illuminate\Contracts\Foundation\Application  $app
+     * @return void
+     */
+    public function bootstrap(Application $app)
+    {
+        // ...
+        Facade::setFacadeApplication($app);
+        // ...
+    }
+}
+</code></pre>
+
+<p>这里看到了设置 $app ，这里的 $app 即为 Laravel 框架的核心：容器类Illuminate\Contracts\Foundation\Application</p>
 
 <h2 id="toc_3">总结</h2>
 
