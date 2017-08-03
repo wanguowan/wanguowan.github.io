@@ -91,6 +91,14 @@
           
 
       
+        <li class="divider"></li>
+        <li><label>算法</label></li>
+
+          
+            <li><a title="堆排序" href="15016700909771.html">堆排序</a></li>
+          
+
+      
       </ul>
     </aside>
 
@@ -144,6 +152,12 @@
                         
 
                     
+                      <li class="side-title"><span>算法</span></li>
+                        
+                          <li><a title="堆排序" href="15016700909771.html">堆排序</a></li>
+                        
+
+                    
                   </ul>
                 </nav>
                 </div>
@@ -156,331 +170,237 @@
 
 	
 		<div class="markdown-body">
-		<h1>Laravel 基础 - 门面</h1>
+		<h1>堆排序</h1>
 
-		<p>今天查找问题时，突然看到关于 Laravel 中 Facade 一句描述：</p>
+		<p>最近在为找工作做准备，然后就在看排序算法，刚好在自学go，然后就用go把常见的几个排序算法实现了一下，收获还是不少的。</p>
+
+<p>这里就先说一下堆排序。说到堆排序就得先说堆，然后才有排序。博主我刚开始也是一脸懵逼，什么是堆呀，堆内存、栈内存是什么我还知道，堆是什么？</p>
+
+<h2 id="toc_0">堆</h2>
+
+<p>首先堆是一个完全二叉树，什么是完全二叉树，小伙伴们可以自己百度，这里送出<a href="https://baike.baidu.com/item/%E5%AE%8C%E5%85%A8%E4%BA%8C%E5%8F%89%E6%A0%91/7773232?fr=aladdin">传送门</a>。堆排序中的堆还要满足下面一点</p>
 
 <blockquote>
-<p>其实 Facade 类利用了 __callStatic() 这个魔术方法来延迟调用容器中的对象的方法，这里不过多讲解，你只需要知道Facade实现了将对它调用的静态方法映射到绑定类的动态方法上</p>
+<p>父结点的键值总是大于或等于（小于或等于）任何一个子节点的键值。</p>
 </blockquote>
 
-<p>瞬间对 Facde 实现原理感兴趣了，平时只是使用 Facade ，大概了解到的是 Facade 通过 Provider 中 register 方法注册到容器中，其中 register 方法中的 key 与 Facade 中方法返回的注册 key 相同即可使用，还没有研究过后面实现原理，更没有考虑如何通过静态方法可以调用实例的静态方法。</p>
+<p>这里具体是大于等于或小于等于取决于堆是最大堆还是最小堆。如果是最大堆，那父节点就大于等于子节点；如果是最小堆，那父节点就小于等于子节点</p>
 
-<p>这里就通过分析代码了解一下 Facade 实现</p>
+<p>这里，刚开始看到这，博主我又是一脸懵逼，只需要父节点大于等于子节点就可以排序啦？左右两个子节点没有什么特殊规则？也就是左子节点与右子节点大小关系对排序结果无影响。。。。</p>
 
-<h2 id="toc_0">简介</h2>
+<p>what？那我如何通过对生成的堆遍历来生成有序数组呢？</p>
 
-<p>门面为应用的服务容器中的绑定类提供了一个&quot;静态&quot;接口。Laravel 内置了很多门面，你可能在不知道的情况下正在使用它们。Laravel 的门面作为服务容器中的底层类的&quot;静态代理&quot;，相比于传统静态方法，在维护时能够提供更加易于测试、更加灵活的、简明且富有表现力的语法。</p>
+<p>这里先说一下，这是博主认识错误。。没有了解到堆排序的本质，下面说明堆排序</p>
 
-<p>Laravel 的所有门面都定义在 Illuminate\Support\Facades 命名空间下，所以我们可以轻松访问到门面：</p>
+<h2 id="toc_1">堆排序</h2>
 
-<pre><code>use Illuminate\Support\Facades\Cache;
+<p>堆排序的本质其实是选择排序，所谓选择排序是从待排序数组中选择最大或最小的一个元素，然后存放到队列的起始位置或终止位置，这取决于具体实现</p>
 
-Route::get(&#39;/cache&#39;, function () {
-    return Cache::get(&#39;key&#39;);
-});
+<p>这就解释了，为什么堆排序的堆，只需要保证父节点值大于或等于任何子节点就好（这里用最大堆举例）。堆排序大概思路（以最大堆为例，从小到大排序，使用数组模拟堆）：</p>
+
+<pre><code>1. 将待排序数组整理成堆
+2. 根节点和数组最后节点交换（将最大值放到最后）
+3. 将数组0到maxLen-1元素重新整理成堆
+4. 重复步骤2，直到堆就剩下一个元素，排序完成
 </code></pre>
 
-<p>在整个Laravel文档中，很多例子使用了门面来演示框架的各种功能特性</p>
+<p>这里注意，为了方便整理堆，所以堆元素从数组0位置开始，也就是已排序元素放到最后。这样的话，如果是从小到大排序的话，就使用最大堆，然后堆的根节点放到数组最后就是最大值。反过来，如果是从大到小排序，就使用最小堆，堆的根节点放到数组最后就是最小值。</p>
 
-<h2 id="toc_1">何时使用门面</h2>
+<h2 id="toc_2">堆的操作</h2>
 
-<p>门面有诸多优点，其提供了简单、易记的语法，让我们无需记住长长的类名即可使用Laravel提供的功能特性，此外，由于他们对 PHP 动态方法的独特用法，使得它们很容易测试。</p>
+<p>堆排序主要牵扯到堆元素的插入和堆元素的删除，这里对这两个操作说明一下后就可以写代码啦</p>
 
-<p>但是，使用门面也有需要注意的地方，一个最主要的危险就是类范围蠕变。由于门面如此好用并且不需要注入，在单个类中使用过多门面，会让类很容易变得越来越大。使用依赖注入则会让此类问题缓解，因为一个巨大的构造函数会让我们很容易判断出类在变大。因此，使用门面的时候要尤其注意类的大小，以便控制其有限职责。</p>
+<h3 id="toc_3">插入</h3>
 
-<blockquote>
-<p>注：构建与 Laravel 交互的第三方扩展包时，最好注入 Laravel 契约而不是使用门面，因为扩展包在 Laravel 之外构建，你将不能访问 Laravel 的门面测试辅助函数。</p>
-</blockquote>
+<p>过程如下图</p>
 
-<h2 id="toc_2">工作原理</h2>
+<p><img src="media/15016700909771/pic-1.jpg" alt=""/></p>
 
-<p>在 Laravel 应用中，门面就是一个为容器中对象提供访问方式的类。该机制原理由 Facade 类实现。Laravel 自带的门面，以及我们创建的自定义门面，都会继承自 Illuminate\Support\Facades\Facade 基类。</p>
+<p>首先已有堆，需要在该堆中插入新节点25，</p>
 
-<p>门面类只需要实现一个方法：getFacadeAccessor。正是 getFacadeAccessor 方法定义了从容器中解析什么，然后 Facade 基类使用魔术方法 __callStatic() 从你的门面中调用解析对象。</p>
+<p>第一步：按照完全二叉树原则，将新节点添加到二叉树的叶子节点中<br/>
+第二步：按照堆的规则，对堆进行调整。首先25的父节点没有25大，所以将父节点与25进行交换。然后继续比较25与他的父节点值。如果小于或等于，则堆调整完成。如果大于，则继续调整</p>
 
-<p>下面通过代码分析 Facade 中 Cookie 使用来分析 Facade 工作原理</p>
+<h3 id="toc_4">删除</h3>
 
-<pre><code>&lt;?php
+<p>过程如下图</p>
 
-namespace App\Http\Controllers;
+<p><img src="media/15016700909771/pic-2.jpg" alt=""/></p>
 
-use Illuminate\Support\Facades\Cookie;
+<p>首先已有堆，删除堆顶元素</p>
 
-class CookieTestController extends Controller
-{
-    public function setCookie( Request $request )
-    {
-        Cookie::queue( &#39;wan&#39;, &#39;test&#39;, 60, &#39;/&#39;, &#39;.onlywan.cc&#39;, false, true );
-    }
+<p>第一步：删除元素40，然后将堆末元素10值放到堆顶元素上，如上图中第三个图<br/>
+第二步：重新调整堆，找到堆顶元素左右子节点中最大值与堆顶元素进行交换。<br/>
+第三步：交换后，对交换后的子节点对应的子树继续进行步骤2操作，直到堆调整完</p>
+
+<p>有了上面两个操作，就可以开始写堆操作的代码啦</p>
+
+<h2 id="toc_5">代码实现</h2>
+
+<pre><code>package main
+
+import (
+    &quot;awesomeProject/alg/lib&quot;
+    &quot;fmt&quot;
+    &quot;time&quot;
+)
+
+//  函数入口
+func main() {
+    //  排序元素数量
+    count := 1000000
+
+    //  获得排序元素，即产生count个随机数数组
+    arrRand := lib.GetRandom( count )
+    //  记录开始执行时间
+    startTime := time.Now().UnixNano()
+    //  调用排序函数，传递需要排序的数组
+    HeapSort( arrRand )
+    //  记录执行完毕时间
+    endTime := time.Now().UnixNano()
+
+    //  打印时间
+    fmt.Println( &quot;执行时间：&quot;, (endTime - startTime) / 1000000 )
+    //lib.PrintArr( arrRand )
 }
-</code></pre>
 
-<p>注意我们在顶部引用了 Cookie 门面。</p>
-
-<p>下面我们查看 Illuminate\Support\Facades\Cookie 类的源码，会发现其中并没有静态方法 queue</p>
-
-<pre><code>&lt;?php
-
-namespace Illuminate\Support\Facades;
+func HeapSort( arrRand []int ) {
+    //  获得数组大小
+    count := len( arrRand )
+    //  将无序数组按照堆规则生成最大堆
+    createHeap( arrRand, count )
+    //  从堆中获得排序数组
+    getArrWithHeap( arrRand )
+}
 
 /**
- * @see \Illuminate\Cookie\CookieJar
+    对arrRand进行整理，使其形成堆结构
+    end 参数为需要整理的数组元素最后一位位置
  */
-class Cookie extends Facade
-{
-    /**
-     * Determine if a cookie exists on the request.
-     *
-     * @param  string  $key
-     * @return bool
-     */
-    public static function has($key)
-    {
-        return ! is_null(static::$app[&#39;request&#39;]-&gt;cookie($key, null));
-    }
+func createHeap( arrRand []int, end int ) {
+    //  数组长度
+    count := end
 
-    /**
-     * Retrieve a cookie from the request.
-     *
-     * @param  string  $key
-     * @param  mixed   $default
-     * @return string
-     */
-    public static function get($key = null, $default = null)
-    {
-        return static::$app[&#39;request&#39;]-&gt;cookie($key, $default);
-    }
+    //  使用数组模拟堆，第一个节点默认已有序，
+    //  所以从数组第二个元素，也就是index=1开始往堆中插入元素
+    for i:=1; i&lt;count; i++ {
+        nIndex := i                 //  记录需要调整元素索引
+        nCom := (nIndex -1) / 2     //  需要调整索引元素父节点索引
 
-    /**
-     * Get the registered name of the component.
-     *
-     * @return string
-     */
-    protected static function getFacadeAccessor()
-    {
-        return &#39;cookie&#39;;
+        //  循环，直到父节点&gt;子节点或已调整到根节点 退出循环
+        for {
+            //  子节点&gt;父节点，调整节点值
+            if arrRand[nIndex] &gt; arrRand[nCom] {
+                tmp := arrRand[nIndex]
+                arrRand[nIndex] = arrRand[nCom]
+                arrRand[nCom] = tmp
+
+                //  将待调整节点指向父节点
+                nIndex = nCom
+                //  如果当前父节点已为根节点，也就是下一次调整节点也为根节点，跳出结束调整
+                if nCom == 0 {
+                    break
+                }
+            } else {    //  父节点&gt;=子节点，调整结束
+                break
+            }
+            //  将父节点重新指向当前父节点的父节点
+            nCom = ( nCom -1 ) / 2
+        }
     }
 }
-</code></pre>
-
-<p>Cookie 门面继承了 Facade 基类并定义了 getFacadeAccessor 方法，该方法的工作就是返回服务容器绑定类的别名，当用户引用 Cookie 类的任何静态方法时，Laravel 从服务容器中解析 cookie 绑定，然后在解析出的对象上调用所有请求方法。</p>
-
-<p>如何绑定cookie的呢，则是通过 config/app.php 中 providers 的 Illuminate\Cookie\CookieServiceProvider::class 绑定的</p>
-
-<pre><code>&lt;?php
-
-namespace Illuminate\Cookie;
-
-use Illuminate\Support\ServiceProvider;
-
-class CookieServiceProvider extends ServiceProvider
-{
-    /**
-     * Register the service provider.
-     *
-     * @return void
-     */
-    public function register()
-    {
-        $this-&gt;app-&gt;singleton(&#39;cookie&#39;, function ($app) {
-            $config = $app[&#39;config&#39;][&#39;session&#39;];
-
-            return (new CookieJar)-&gt;setDefaultPathAndDomain($config[&#39;path&#39;], $config[&#39;domain&#39;], $config[&#39;secure&#39;]);
-        });
-    }
-}
-</code></pre>
-
-<p>可以看出来 Facade 中 Cookie 对应绑定的实现类为 Illuminate\Cookie\CookieJar。具体 CookieJar的实现，大家可以自己看源码，下面继续分析如何将静态方法映射到绑定类的动态方法上。</p>
-
-<p>如上面所说，主要是 Facade 的 __callStatic() 魔术方法实现的</p>
-
-<blockquote>
-<p>__callStatic() 魔术方法作用：当调用当前环境下未定义或不可见的类属性或方法时，该方法会被调用。</p>
-</blockquote>
-
-<p>下面是Facade 的 __callStatic() 魔术方法实现</p>
-
-<pre><code>/**
-* Handle dynamic, static calls to the object.
-*
-* @param  string  $method
-* @param  array   $args
-* @return mixed
-*
-* @throws \RuntimeException
-*/
-public static function __callStatic($method, $args)
-{
-   $instance = static::getFacadeRoot();
-
-   if (! $instance) {
-       throw new RuntimeException(&#39;A facade root has not been set.&#39;);
-   }
-
-   switch (count($args)) {
-       case 0:
-           return $instance-&gt;$method();
-       case 1:
-           return $instance-&gt;$method($args[0]);
-       case 2:
-           return $instance-&gt;$method($args[0], $args[1]);
-       case 3:
-           return $instance-&gt;$method($args[0], $args[1], $args[2]);
-       case 4:
-           return $instance-&gt;$method($args[0], $args[1], $args[2], $args[3]);
-       default:
-           return call_user_func_array([$instance, $method], $args);
-   }
-}
-</code></pre>
-
-<p>首先获得注册的实例，然后调用实例的 method 方法。</p>
-
-<p>下面是获得实例对象 getFacadeRoot 实现</p>
-
-<pre><code>/**
-* Get the root object behind the facade.
-*
-* @return mixed
-*/
-public static function getFacadeRoot()
-{
-   return static::resolveFacadeInstance(static::getFacadeAccessor());
-}
-</code></pre>
-
-<p>其中 getFacadeAccesssor() 即 Cookie 门面中实现的方法，返回绑定名 &quot;cookie&quot;。</p>
-
-<p>resolveFacadeInstance 方法</p>
-
-<pre><code>/**
-* Resolve the facade root instance from the container.
-*
-* @param  string|object  $name
-* @return mixed
-*/
-protected static function resolveFacadeInstance($name)
-{
-   if (is_object($name)) {
-       return $name;
-   }
-
-   if (isset(static::$resolvedInstance[$name])) {
-       return static::$resolvedInstance[$name];
-   }
-
-   return static::$resolvedInstance[$name] = static::$app[$name];
-}
-</code></pre>
-
-<p>分析代码，如果这个Instance已经在列表中，则直接使用；否则从 $app 获取。如果第一次使用，肯定会从 $app 中获取</p>
-
-<p>查看 $app 权限，权限protected，所以应该是通过 set 方法初始化的。</p>
-
-<pre><code>protected static $app;
 
 /**
-* Set the application instance.
-*
-* @param  \Illuminate\Contracts\Foundation\Application  $app
-* @return void
-*/
-public static function setFacadeApplication($app)
-{
-   static::$app = $app;
+    调整堆，
+    arrRand为模拟堆的数组，
+    nIndex为需要调整的元素在数组中的下标
+    len为堆的元素个数
+ */
+func ajustHeap( arrRand []int, nIndex int, len int ) {
+    count := len
+
+    //  左孩子位置
+    nLeftIndex := nIndex * 2 + 1
+    //  右孩子位置
+    nRightIndex := nIndex * 2 + 2
+    //  最大值位置，默认待调整元素
+    nLargest := nIndex
+
+    if nLeftIndex &lt; count {
+        if arrRand[ nLeftIndex ] &gt; arrRand[ nLargest ] {
+            //  如果左孩子存在，并且左孩子比最大值大，则将最大值索引修改为左孩子对应索引
+            nLargest = nLeftIndex
+        }
+    }
+
+    if nRightIndex &lt; count {
+        if arrRand[ nRightIndex ] &gt; arrRand[ nLargest ] {
+            //  如果右孩子存在，并且右孩子比最大值大，则将最大值索引修改为右孩子对应索引
+            nLargest = nRightIndex
+        }
+    }
+
+    //  如果最大值索引已经不是默认待调整元素原来位置，则进行交换
+    if nLargest != nIndex {
+        //  交换值
+        tmp := arrRand[ nIndex ]
+        arrRand[ nIndex ] = arrRand[ nLargest ]
+        arrRand[ nLargest ] = tmp;
+
+        //  继续对调整后的子树进行调整
+        ajustHeap( arrRand, nLargest, len )
+    }
 }
-</code></pre>
 
-<p>剩下就是找 $app 如何初始化的；通过查找发现是 Laravel 框架在初始化 Http Kernel 时初始化的，代码如下</p>
+/**
+    从堆中获得排序队列
+ */
+func getArrWithHeap( arrRand []int ) {
+    //  获得队列长度
+    count := len( arrRand )
 
-<p>bootstrap/app.php文件中</p>
+    //  循环取堆对大元素，将元素与堆元素最后值进行交换，然后对剩下的堆进行重整
+    //  即删除堆顶元素，然后重新调整堆；只不过这里删除的元素放到数组后面，形成了有序的序列，并降低空间复杂度
+    for i:= 0; i&lt;count-1; i++ {
+        //  记录最大值
+        tmp := arrRand[0]
+        //  获得堆最后元素位置
+        lastIndex := count-i-1
+        //  将堆最后元素值放到堆顶
+        arrRand[0] = arrRand[lastIndex]
+        //  将最大值放到堆最后元素位置，即数组后面
+        arrRand[lastIndex] = tmp
 
-<pre><code>$app-&gt;singleton(
-    Illuminate\Contracts\Http\Kernel::class,
-    App\Http\Kernel::class
-);
-</code></pre>
-
-<p>App\Http\Kernel</p>
-
-<pre><code>&lt;?php
-
-namespace App\Console;
-
-use Illuminate\Console\Scheduling\Schedule;
-use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
-
-class Kernel extends ConsoleKernel
-{
-    /**
-     * The Artisan commands provided by your application.
-     *
-     * @var array
-     */
-    protected $commands = [
-        // Commands\Inspire::class,
-    ];
-
-    /**
-     * Define the application&#39;s command schedule.
-     *
-     * @param  \Illuminate\Console\Scheduling\Schedule  $schedule
-     * @return void
-     */
-    protected function schedule(Schedule $schedule)
-    {
-        // $schedule-&gt;command(&#39;inspire&#39;)
-        //          -&gt;hourly();
+        //  将剩下的堆，进行重新调整
+        ajustHeap( arrRand, 0, lastIndex )
+        //createHeap( arrRand, lastIndex )
     }
 }
 </code></pre>
 
-<p>ConsoleKernel基类中 $bootstrappers 数组中</p>
+<p>过程动图，很给力（这里使用别人图片）</p>
 
-<pre><code>protected $bootstrappers = [
-   // ...
-   &#39;Illuminate\Foundation\Bootstrap\RegisterFacades&#39;,
-   // ...
-];
-</code></pre>
+<p>动画中在排序过程之前简单的表现了创建堆的过程以及堆的逻辑结构。</p>
 
-<p>Illuminate\Foundation\Bootstrap\RegisterFacades</p>
+<p><img src="media/15016700909771/pic-3.gif" alt=""/></p>
 
-<pre><code>&lt;?php
+<h2 id="toc_6">总结</h2>
 
-namespace Illuminate\Foundation\Bootstrap;
+<p>堆排序空间复杂度为O(1)，只需要一个临时变量用于交换的时候，临时存储值。时间复杂度为nlogn。</p>
 
-use Illuminate\Support\Facades\Facade;
-use Illuminate\Foundation\AliasLoader;
-use Illuminate\Contracts\Foundation\Application;
+<p>说到时间复杂度，插一个小插曲，也是这里值得记录的地方。如果时间复杂度为nlogn的话，其速度应该与快排差不多，至少在同一量级。结果在刚开始实现完成后，发现100w数据量，快排大概100多毫秒。而我写的堆排序1w的数据差不多也得100多毫秒。</p>
 
-class RegisterFacades
-{
-    /**
-     * Bootstrap the given application.
-     *
-     * @param  \Illuminate\Contracts\Foundation\Application  $app
-     * @return void
-     */
-    public function bootstrap(Application $app)
-    {
-        // ...
-        Facade::setFacadeApplication($app);
-        // ...
-    }
-}
-</code></pre>
+<p>这个郁闷了，然后查找代码中性能损耗在哪里了。因为效率这么低，肯定是哪块排序的核心算法有问题，说大点就是算法的本质没有搞明白。最后终于找到问题的本质了</p>
 
-<p>这里看到了设置 $app ，这里的 $app 即为 Laravel 框架的核心：容器类Illuminate\Contracts\Foundation\Application</p>
+<p>问题出在获得有序数组的过程中，删除堆顶元素后，刚开始偷懒，调用的是重新创建堆，也就是从头到尾一个一个元素重新往堆中插入形成新堆。而真正的删除过程，只需要调整树中的某个分支即可，而无需每次调整都重新创建分枝。通过代码中方法getArrWithHeap( arrRand []int )倒数第二行可以看到，原本调用的是创建堆的方法，后面添加的调整堆的方法，然后重新测试，100w数据量，堆排序大概200毫秒，效率提升两个数量级。</p>
 
-<h2 id="toc_3">总结</h2>
-
-<p>到这里 Laravel 的 Facade 也算是分析完了，通过了解原理，方便后面自己设计实现时参考使用，而具体使用起来相对于依赖注入及辅助函数等的优缺点还得在后面项目中通过使用进行总结。</p>
+<p>到这里，堆排序算是整理完毕。也算是对自己的收获进行了整理。也希望这里能帮助到其他小伙伴。</p>
 
 
 		</div>
+	
+
+ 
 	
 
  
