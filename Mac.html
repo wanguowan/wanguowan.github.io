@@ -201,16 +201,12 @@ brew services php56 start
 
 <h2 id="toc_2">遇到的问题</h2>
 
-<ul>
-<li>brew services php56 start启动不起来fpm</li>
-</ul>
+<h4 id="toc_3">1. brew services php56 start启动不起来fpm</h4>
 
 <pre><code>解决方案：卸载重装
 </code></pre>
 
-<ul>
-<li>brew uninstall php56 提示“Uninstalling /usr/local/Cellar/php56/5.6.30_6... (284 files, 15.2MB)Error: Directory not empty @ dir_s_rmdir - /usr/local/Cellar/php56/5.6.30_6</li>
-</ul>
+<h4 id="toc_4">2. brew uninstall php56 提示“Uninstalling /usr/local/Cellar/php56/5.6.30_6... (284 files, 15.2MB)Error: Directory not empty @ dir_s_rmdir - /usr/local/Cellar/php56/5.6.30_6</h4>
 
 <pre><code>解决方案：
 cd /usr/local/Cellar/php56/5.6.30_6
@@ -220,9 +216,7 @@ sudo rm -rf *
 brew install php56
 </code></pre>
 
-<ol>
-<li>安装完php5.6后，执行brew link php56，报错</li>
-</ol>
+<h4 id="toc_5">3. 安装完php5.6后，执行brew link php56，报错</h4>
 
 <p><img src="media/15233783940091/15233792472661.jpg" alt=""/></p>
 
@@ -233,9 +227,7 @@ cd /usr/local/opt/php@5.6/sbin
 php-fpm -y /usr/local/etc/php/5.6/php-fpm.conf
 </code></pre>
 
-<ul>
-<li>高高兴兴测试程序，结果方法还是无法使用，使用phpinfo()查看，PHP版本7.1.7</li>
-</ul>
+<h4 id="toc_6">4. 高高兴兴测试程序，结果方法还是无法使用，使用phpinfo()查看，PHP版本7.1.7</h4>
 
 <pre><code>解决方案：
 刚开始以为是php.ini的问题，使用
@@ -266,7 +258,7 @@ php-fpm -y /usr/local/etc/php/5.6/php-fpm.conf
 查看php版本，yes～～～问题解决
 </code></pre>
 
-<h2 id="toc_3">思考（后续继续查找原因，困死。。）</h2>
+<h2 id="toc_7">思考（后续继续查找原因，困死。。）</h2>
 
 <pre><code>1. 为什么好好的环境就会突然失效呢
 2. 为什么默认PHP版本是7.1.7 而/usr/local/opt/php71/bin下，执行./php -v 版本为7.1.13
@@ -274,7 +266,7 @@ php-fpm -y /usr/local/etc/php/5.6/php-fpm.conf
 4. 突然又发现，切换为brew安装的php7，页面上phpinfo中版本为7.1.13，why。。。。
 </code></pre>
 
-<h2 id="toc_4">临时php切换方案</h2>
+<h2 id="toc_8">临时php切换方案</h2>
 
 <pre><code>php7-&gt;php5:
 1. brew services php71 stop
