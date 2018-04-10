@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
     
-  Composer - 
+  Mac - 
   
   </title>
  <meta name="description" content="">
@@ -184,51 +184,109 @@
 
 	
 		<div class="markdown-body">
-		<h1>Laravel RawCookie</h1>
+		<h1>brew切换php版本遇到问题</h1>
 
-		<h2 id="toc_0">介绍</h2>
+		<h2 id="toc_0">需要切换版本原因</h2>
 
-<p>这里介绍一下自己封装的composer包，wan/raw-cookie。</p>
+<pre><code>有一套老代码，没有使用框架，里面好多方法php7不支持，只能使用php5.6
+</code></pre>
 
-<p>主要作用是在laravel框架中使用setrawcookie设置cookie值。</p>
+<h2 id="toc_1">正常切换流程</h2>
 
-<h2 id="toc_1">优势</h2>
+<pre><code>brew services php71 stop
+brew unlink php71
+brew link php56
+brew services php56 start
+</code></pre>
 
-<p>大家可能比较困惑，php不是有原生的setrawcookie吗，Laravel中也有Cookie操作类。这里说明一下写这个包的原因：</p>
+<h2 id="toc_2">遇到的问题</h2>
 
-<h3 id="toc_2">1.更加优雅</h3>
+<ul>
+<li>brew services php56 start启动不起来fpm</li>
+</ul>
 
-<p>优雅的原因是什么呢，因原生setcookie及setrawcookie设置后无法取消，对一些业务处理无法进行灵活的支持，这里举一个例子说明一下</p>
+<pre><code>解决方案：卸载重装
+</code></pre>
 
-<p>比如登录操作，登录成功后，需要下发对应的cookie。这时，登录接口添加了一个登录风险检查功能，就是判断用户登录是否存在风险。如果存在风险，则相应的对用户进行更严格的验证。</p>
+<ul>
+<li>brew uninstall php56 提示“Uninstalling /usr/local/Cellar/php56/5.6.30_6... (284 files, 15.2MB)Error: Directory not empty @ dir_s_rmdir - /usr/local/Cellar/php56/5.6.30_6</li>
+</ul>
 
-<p>方式两种：<br/>
-1. 登录成功后，在代码中添加风险检测，如果检测通过，下发cookie；不通过，不下发cookie，返回错误。<br/>
-2. 做一个事后中间件，如果检测到是登录，进行登录风险检测，如果检测通过，继续返回；不通过，取消cookie下发，取消原响应值</p>
+<pre><code>解决方案：
+cd /usr/local/Cellar/php56/5.6.30_6
+sudo rm -rf *
 
-<p>分析两种方式：<br/>
-方式1优点：实现逻辑简单；缺点：侵入到业务代码逻辑中，需要对应修改维护业务流程<br/>
-方式2优点：对业务代码无侵入，业务代码可以随时修改自己逻辑而无需关注风险检查调用时机的业务逻辑；缺点：对应实现复杂度会高一些，特别是风险检测参数，需要自己从request及response中获取。</p>
+#重新安装
+brew install php56
+</code></pre>
 
-<p>这里我们选择了第二种方案。这里就牵扯到下发cookie的取消。如果使用setcookie将cookie过期的话，在业务中设置的cookie在header中依然可以看到，先设置了cookie的值，然后对应把cookie值设置为空，并过期，存在安全性问题。</p>
+<ol>
+<li>安装完php5.6后，执行brew link php56，报错</li>
+</ol>
 
-<p>使用RawCookie后，通过事后中间件，直到最后返回Response的时候，才真正的执行setcookie或setrawcookie，中间对于使用RawCookie::queue()方法添加的cookie，可以随时删除。</p>
+<p><img src="media/15233783940091/15233792472661.jpg" alt=""/></p>
 
-<h3 id="toc_3">2.添加setrawcookie操作</h3>
+<p>这个报错感觉死循环了。。。</p>
 
-<p>Laravel 5.1及Laravel 5.2版本中，Cookie::queue方法，无法指定cookie的value值不做urlencode操作。</p>
+<pre><code>解决方案：我的目的就是启动fpm，既然php5.6已经安装上了，我自己手动启动fpm就是了
+cd /usr/local/opt/php@5.6/sbin
+php-fpm -y /usr/local/etc/php/5.6/php-fpm.conf
+</code></pre>
 
-<p>Laravel 5.3以后，Laravel自带的Cookie已经支持该方法。因为我们线上Laravel版本都是5.1，所以这里自己封装RawCookie，使其支持类似RawCookie::queue()操作，并添加raw参数，根据raw参数判断，最终使用setcookie还是setrawcookie。</p>
+<ul>
+<li>高高兴兴测试程序，结果方法还是无法使用，使用phpinfo()查看，PHP版本7.1.7</li>
+</ul>
 
-<h2 id="toc_4">使用</h2>
+<pre><code>解决方案：
+刚开始以为是php.ini的问题，使用
+php-fpm -y /usr/local/etc/php/5.6/php-fpm.conf -c /usr/local/etc/php/5.6/php.ini
+重新启动php-fpm，发现php版本依然没变；突然感觉php版本应该与php.ini配置文件无关，而应该与php执行文件或者是zend虚拟机有关。
 
-<p>使用composer require wan/raw-cookie安装。</p>
+然后查看/usr/local/opt/php@5.6/bin下有php执行程序，执行./php -v，发现版本为5.6.35，感觉问题应该就解决了
 
-<p>当前只支持Laravel框架，主要是对Laravel框架中的Cookie及CookieJar进行包装。</p>
+which php查看了系统默认php命令位置：/usr/bin/php；
+ls -l /usr/bin/php
+该文件不是软链
+执行 sudo mv /usr/bin/php /usr/bin/php-7.1.7结果提示mv: rename php to php-7.1.7: Operation not permitted
+网上查询原因：为了防止系统被入侵，mac系统部分文件夹无写权限
+如果需要修改，需要重启按住 Command+R，进入恢复模式，打开Terminal，执行：csrutil disable（恢复的话，同样方式进入，执行：csrutil enable）
 
-<p>具体集成见项目README</p>
+感觉每次切版本都要修改这玩意儿，太变态了，不行。
 
-<p>github地址：<a href="https://github.com/wanguowan/composer.RawCookie">https://github.com/wanguowan/composer.RawCookie</a></p>
+突然想到，为什么要改呢，我让/usr/local/opt/php@5.6/bin路径，在环境变量中的位置比/usr/bin靠前就好了呀
+查看~/.zshrc(zsh resource文件，bash对应文件~/.bashrc)，在文件末尾添加
+export PATH=&quot;/usr/local/opt/php@5.6/bin:$PATH&quot;（ps:这命令在前面错误截图上有过提示，但是执行了也是一样继续出错误）
+
+保存退出后，执行
+source ~/.zshrc
+
+然后重启fpm
+php-fpm -y /usr/local/etc/php/5.6/php-fpm.conf
+
+查看php版本，yes～～～问题解决
+</code></pre>
+
+<h2 id="toc_3">思考（后续继续查找原因，困死。。）</h2>
+
+<pre><code>1. 为什么好好的环境就会突然失效呢
+2. 为什么默认PHP版本是7.1.7 而/usr/local/opt/php71/bin下，执行./php -v 版本为7.1.13
+3. brew的link，unlink都做了哪些操作，可以使php版本进行切换，而我自己修改却需要进入恢复模式（难道7.1.7是系统自带的，因为brew也没有权限切换了，导致环境失效？）
+4. 突然又发现，切换为brew安装的php7，页面上phpinfo中版本为7.1.13，why。。。。
+</code></pre>
+
+<h2 id="toc_4">临时php切换方案</h2>
+
+<pre><code>php7-&gt;php5:
+1. brew services php71 stop
+2. 修改~/.zshrc，添加环境变量
+3. source ~/.zshrc
+4. /usr/local/etc/php/5.6/sbin/php-fpm -y /usr/local/etc/php/5.6/php-fpm.conf
+
+php5-&gt;php7:
+1. 修改~/.zshrc，删除无用环境变量
+2. 新打开终端
+3. brew services php71 start
+</code></pre>
 
 
 		</div>
